@@ -1,16 +1,38 @@
 export const CONFIG = {
-  contractAddress: "0x386aC22701d4E0419A2406bE32cD255D2b6c42cE",
+  contractAddress: "0x386aC22701d4E0419A2406bE32cD255D2b6c42cE", // ඔයාගේ PaymentProcessor Contract එක
   usdtAddress: "0xdAC17F958D2ee523a2206206994597C13D831ec7",
   chainId: 1
 };
 
+// USDT ABI (viem/wagmi වලට ගැලපෙන විදිහට)
 export const USDT_ABI = [
-  "function balanceOf(address) view returns (uint256)",
-  "function allowance(address, address) view returns (uint256)",
-  "function approve(address, uint256) returns (bool)",
-  "function decimals() view returns (uint8)"
+  {
+    "constant": true,
+    "inputs": [{ "name": "_owner", "type": "address" }],
+    "name": "balanceOf",
+    "outputs": [{ "name": "balance", "type": "uint256" }],
+    "type": "function"
+  },
+  {
+    "constant": false,
+    "inputs": [
+      { "name": "_spender", "type": "address" },
+      { "name": "_value", "type": "uint256" }
+    ],
+    "name": "approve",
+    "outputs": [{ "name": "", "type": "bool" }],
+    "type": "function"
+  },
+  {
+    "constant": true,
+    "inputs": [],
+    "name": "decimals",
+    "outputs": [{ "name": "", "type": "uint8" }],
+    "type": "function"
+  }
 ];
 
+// ටොකන් ලිස්ට් එක (Binance API එකට ගැලපෙන නම් එක්ක)
 export const TOKEN_LIST = [
   { name: 'Tether', symbol: 'USDT', binanceSymbol: 'USDT', icon: 'https://cryptologos.cc/logos/tether-usdt-logo.png?v=040' },
   { name: 'Ethereum', symbol: 'ETH', binanceSymbol: 'ETH', icon: 'https://cryptologos.cc/logos/ethereum-eth-logo.png?v=040' },
@@ -33,9 +55,11 @@ export const TOKEN_LIST = [
   { name: 'Aptos', symbol: 'APT', binanceSymbol: 'APT', icon: 'https://cryptologos.cc/logos/aptos-apt-logo.png?v=040' },
   { name: 'Arbitrum', symbol: 'ARB', binanceSymbol: 'ARB', icon: 'https://cryptologos.cc/logos/arbitrum-arb-logo.png?v=040' },
   { name: 'Optimism', symbol: 'OP', binanceSymbol: 'OP', icon: 'https://cryptologos.cc/logos/optimism-ethereum-op-logo.png?v=040' },
+  { name: 'Injective', symbol: 'INJ', binanceSymbol: 'INJ', icon: 'https://cryptologos.cc/logos/injective-inj-logo.png?v=040' },
   { name: 'Maker', symbol: 'MKR', binanceSymbol: 'MKR', icon: 'https://cryptologos.cc/logos/maker-mkr-logo.png?v=040' },
   { name: 'Aave', symbol: 'AAVE', binanceSymbol: 'AAVE', icon: 'https://cryptologos.cc/logos/aave-aave-logo.png?v=040' },
   { name: 'Curve', symbol: 'CRV', binanceSymbol: 'CRV', icon: 'https://cryptologos.cc/logos/curve-dao-token-crv-logo.png?v=040' },
+  { name: 'Synthetix', symbol: 'SNX', binanceSymbol: 'SNX', icon: 'https://cryptologos.cc/logos/synthetix-network-token-snx-logo.png?v=040' },
   { name: 'Compound', symbol: 'COMP', binanceSymbol: 'COMP', icon: 'https://cryptologos.cc/logos/compound-comp-logo.png?v=040' },
   { name: '1inch', symbol: '1INCH', binanceSymbol: '1INCH', icon: 'https://cryptologos.cc/logos/1inch-1inch-logo.png?v=040' },
   { name: 'Enjin', symbol: 'ENJ', binanceSymbol: 'ENJ', icon: 'https://cryptologos.cc/logos/enjin-coin-enj-logo.png?v=040' },
@@ -73,6 +97,7 @@ export const TOKEN_LIST = [
   { name: 'Lido', symbol: 'LDO', binanceSymbol: 'LDO', icon: 'https://cryptologos.cc/logos/lido-dao-ldo-logo.png?v=040' },
 ];
 
+// Live Prices ගන්නා function එක (Binance API)
 export const fetchLivePrices = async () => {
   try {
     const response = await fetch('https://api.binance.com/api/v3/ticker/price');
@@ -96,31 +121,10 @@ export const fetchLivePrices = async () => {
   }
 };
 
-export const fetchMarketData = async () => {
-  try {
-    const response = await fetch(
-      'https://api.coingecko.com/api/v3/coins/markets?vs_currency=usd&ids=bitcoin,ethereum,tether,usd-coin,chainlink,uniswap,dai,matic-network,solana,cardano'
-    );
-    const data = await response.json();
-    const marketData = {};
-    data.forEach(coin => {
-      marketData[coin.symbol.toUpperCase()] = {
-        volume: coin.total_volume,
-        marketCap: coin.market_cap,
-        priceChange: coin.price_change_percentage_24h
-      };
-    });
-    return marketData;
-  } catch (error) {
-    console.error("Error fetching market data:", error);
-    return {};
-  }
-};
-
+// Pools සඳහා Mock Data
 export const MOCK_POOLS = [
-  { rank: 1, pair: 'RLUSD/USDS', version: 'v4 · 0.0005%', tvl: '$50.0M', vol1d: '$166.9M', vol30d: '$627.4M', ratio: '3.34', apr: '0.61%', icons: ['https://cryptologos.cc/logos/tether-usdt-logo.png?v=040', 'https://cryptologos.cc/logos/usd-coin-usdc-logo.png?v=040'] },
-  { rank: 2, pair: 'USDC/USDT', version: 'v4 · Dynamic', tvl: '$5.8M', vol1d: '$78.3M', vol30d: '$2.9B', ratio: '13.41', apr: '3.82%', icons: ['https://cryptologos.cc/logos/usd-coin-usdc-logo.png?v=040', 'https://cryptologos.cc/logos/tether-usdt-logo.png?v=040'] },
-  { rank: 3, pair: 'ETH/USDC', version: 'v3 · 0.01%', tvl: '$13.1M', vol1d: '$73.2M', vol30d: '$6.8B', ratio: '5.59', apr: '15.29%', icons: ['https://cryptologos.cc/logos/ethereum-eth-logo.png?v=040', 'https://cryptologos.cc/logos/usd-coin-usdc-logo.png?v=040'] },
-  { rank: 4, pair: 'ETH/USDC', version: 'v4 · 0.05%', tvl: '$5.7M', vol1d: '$49.1M', vol30d: '$127.5M', ratio: '8.56', apr: '156.32%', icons: ['https://cryptologos.cc/logos/ethereum-eth-logo.png?v=040', 'https://cryptologos.cc/logos/usd-coin-usdc-logo.png?v=040'] },
-  { rank: 5, pair: 'ETH/USDC', version: 'v3 · 0.3%', tvl: '$159.1M', vol1d: '$39.5M', vol30d: '$2.2B', ratio: '0.25', apr: '22.64%', icons: ['https://cryptologos.cc/logos/ethereum-eth-logo.png?v=040', 'https://cryptologos.cc/logos/usd-coin-usdc-logo.png?v=040'] },
+  { rank: 1, pair: 'ETH / USDT', tvl: '$120M', volume: '$45M', apr: '12.5%' },
+  { rank: 2, pair: 'WBTC / ETH', tvl: '$85M', volume: '$22M', apr: '8.2%' },
+  { rank: 3, pair: 'USDC / USDT', tvl: '$200M', volume: '$90M', apr: '4.1%' },
+  { rank: 4, pair: 'LINK / ETH', tvl: '$35M', volume: '$5M', apr: '15.3%' },
 ];

