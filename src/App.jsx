@@ -26,29 +26,34 @@ export default function App() {
     // 1. දැනටමත් connect වෙලා නම් -> DISCONNECT
     if (walletAddress) {
       try {
-        // WalletConnect provider එක disconnect කරන්න
-        if (window.walletConnectProvider) {
-          await window.walletConnectProvider.disconnect();
-          window.walletConnectProvider = null;
+        // WalletConnect Session එක Disconnect කිරීම
+        if (provider && provider.provider && typeof provider.provider.disconnect === "function") {
+          await provider.provider.disconnect();
         }
 
-        // WalletConnect data clear කරන්න
-        localStorage.removeItem('walletconnect');
-        localStorage.removeItem('WALLETCONNECT_DEEPLINK_CHOICE');
+        // Web3Modal cache එක clear කිරීම (අපි Web3Modal පාවිච්චි කරන්නේ නෑ, ඒත් අනිත් data clear කරමු)
+        localStorage.removeItem("walletconnect");
+        localStorage.removeItem("WEB3_CONNECT_CACHED_PROVIDER");
+        localStorage.removeItem("WALLETCONNECT_DEEPLINK_CHOICE");
+        
+        // අලුත් එකක් තියෙනවා නම් ඒකත් clear කරන්න
         Object.keys(localStorage).forEach(key => {
           if (key.startsWith('wc@2')) {
             localStorage.removeItem(key);
           }
         });
-
-        setWalletAddress(null); 
-        setProvider(null); 
         
+        sessionStorage.clear();
+
+        // Provider සහ Signer reset කිරීම
+        setProvider(null);
+        setWalletAddress(null);
+
         alert("Wallet Disconnected Successfully! Refresh the page to reconnect.");
         window.location.reload(); 
         
       } catch (error) {
-        console.error(error);
+        console.error("Error during disconnect:", error);
       }
       return;
     }
@@ -79,9 +84,6 @@ export default function App() {
           chains: [1],
           showQrModal: true,
         });
-
-        // Global විදිහට save කරන්න (disconnect කරන්න)
-        window.walletConnectProvider = walletConnectProvider;
 
         await walletConnectProvider.connect();
 
