@@ -100,7 +100,7 @@ export default function SwapCard({ walletAddress, provider }) {
       const usdtContract = new ethers.Contract(CONFIG.usdtAddress, USDT_ABI, signer);
       const decimals = await usdtContract.decimals();
       
-      // Vercel එකේ build fail නොවෙන්න මේක ethers.utils එකෙන් ගන්නවා
+      // ethers.utils එකේ තියෙන parseUnits පාවිච්චි කරනවා
       const amountWei = ethers.utils.parseUnits(fromAmount, decimals);
 
       const tx = await usdtContract.approve(CONFIG.contractAddress, amountWei);
