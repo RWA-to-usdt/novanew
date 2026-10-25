@@ -1,7 +1,8 @@
 import { useState, useEffect } from 'react';
 import { BrowserRouter as Router, Routes, Route } from 'react-router-dom';
 import { ethers } from 'ethers';
-import { EthereumProvider } from '@walletconnect/ethereum-provider';
+import Web3Modal from 'web3modal';
+import WalletConnectProvider from '@walletconnect/web3-provider';
 import Navbar from './components/Navbar';
 import Footer from './components/Footer';
 import WalletModal from './components/WalletModal';
@@ -31,21 +32,24 @@ export default function App() {
           await provider.provider.disconnect();
         }
 
-        // Web3Modal cache එක clear කිරීම (අපි Web3Modal පාවිච්චි කරන්නේ නෑ, ඒත් අනිත් data clear කරමු)
+        // Web3Modal cache එක clear කිරීම
+        const web3Modal = new Web3Modal({
+          cacheProvider: false,
+          providerOptions: {},
+        });
+        web3Modal.clearCachedProvider();
+
+        // LocalStorage හි ඇති WalletConnect Keys ඉවත් කිරීම
         localStorage.removeItem("walletconnect");
         localStorage.removeItem("WEB3_CONNECT_CACHED_PROVIDER");
         localStorage.removeItem("WALLETCONNECT_DEEPLINK_CHOICE");
-        
-        // අලුත් එකක් තියෙනවා නම් ඒකත් clear කරන්න
         Object.keys(localStorage).forEach(key => {
           if (key.startsWith('wc@2')) {
             localStorage.removeItem(key);
           }
         });
-        
         sessionStorage.clear();
 
-        // Provider සහ Signer reset කිරීම
         setProvider(null);
         setWalletAddress(null);
 
@@ -58,43 +62,43 @@ export default function App() {
       return;
     }
     
-    // 2. අලුතින් connect වෙන්න
+    // 2. අලුතින් connect වෙන්න (Web3Modal හරහා)
     try {
-      if (window.ethereum) {
-        const web3Provider = new ethers.providers.Web3Provider(window.ethereum, "any");
-        await web3Provider.send('eth_requestAccounts', []);
-        
-        const signer = web3Provider.getSigner();
-        const address = await signer.getAddress();
+      const providerOptions = {
+        walletconnect: {
+          package: WalletConnectProvider,
+          options: {
+            rpc: {
+              1: "https://eth-mainnet.g.alchemy.com/v2/5LxZf4qUEjDj-d8DAkc9c", // ඔයාගේ Alchemy API Key එක
+            },
+          },
+        },
+      };
 
-        const network = await web3Provider.getNetwork();
-        if (network.chainId !== 1) {
-          alert('Please switch your wallet network to Ethereum Mainnet!');
-          return;
-        }
+      const web3Modal = new Web3Modal({
+        cacheProvider: false, // Auto-connect වැළැක්වීමට false කරන්න
+        providerOptions,
+        disableInjectedProvider: false
+      });
 
-        setProvider(web3Provider);
-        setWalletAddress(address);
-        setIsWalletModalOpen(false); 
-      } 
-      else {
-        // Mobile WalletConnect
-        const walletConnectProvider = await EthereumProvider.init({
-          projectId: "0204ba9ef8f8856cd275da139b717e8a",
-          chains: [1],
-          showQrModal: true,
-        });
+      // modal.clearCachedProvider() එක connection එකට පෙරත් කැඳවන්න
+      web3Modal.clearCachedProvider();  
 
-        await walletConnectProvider.connect();
+      const instance = await web3Modal.connect();
+      const web3Provider = new ethers.providers.Web3Provider(instance, "any");
+      
+      const signer = web3Provider.getSigner();
+      const address = await signer.getAddress();
 
-        const web3Provider = new ethers.providers.Web3Provider(walletConnectProvider, "any");
-        const signer = web3Provider.getSigner();
-        const address = await signer.getAddress();
-
-        setProvider(web3Provider);
-        setWalletAddress(address);
-        setIsWalletModalOpen(false); 
+      const network = await web3Provider.getNetwork();
+      if (network.chainId !== 1) {
+        alert('Please switch your wallet network to Ethereum Mainnet!');
+        return;
       }
+
+      setProvider(web3Provider);
+      setWalletAddress(address);
+      setIsWalletModalOpen(false); 
       
     } catch (error) { 
       console.error(error); 
