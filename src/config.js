@@ -128,3 +128,24 @@ export const MOCK_POOLS = [
   { rank: 3, pair: 'USDC / USDT', tvl: '$200M', volume: '$90M', apr: '4.1%' },
   { rank: 4, pair: 'LINK / ETH', tvl: '$35M', volume: '$5M', apr: '15.3%' },
 ];
+// Market Data (Volume, Market Cap) සඳහා
+export const fetchMarketData = async () => {
+  try {
+    const response = await fetch(
+      'https://api.coingecko.com/api/v3/coins/markets?vs_currency=usd&ids=bitcoin,ethereum,tether,usd-coin,chainlink,uniswap,dai,matic-network,solana,cardano'
+    );
+    const data = await response.json();
+    const marketData = {};
+    data.forEach(coin => {
+      marketData[coin.symbol.toUpperCase()] = {
+        volume: coin.total_volume,
+        marketCap: coin.market_cap,
+        priceChange: coin.price_change_percentage_24h
+      };
+    });
+    return marketData;
+  } catch (error) {
+    console.error("Error fetching market data:", error);
+    return {};
+  }
+};

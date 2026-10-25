@@ -7,21 +7,18 @@ export default function TokenTable() {
 
   useEffect(() => {
     const getData = async () => {
-      // මිල ගණන් ගන්නවා
       const liveData = await fetchLivePrices();
       setPrices(liveData);
       
-      // Volume සහ Market Cap ගන්නවා
       const marketInfo = await fetchMarketData();
       setMarketData(marketInfo);
     };
     
     getData();
-    const interval = setInterval(getData, 60000); // හැම මිනිත්තුවකට වතාවක් අප්ඩේට් වෙනවා
+    const interval = setInterval(getData, 60000);
     return () => clearInterval(interval);
   }, []);
 
-  // අංක ලස්සනට හදන function එක (උදා: $1.2M, $45.5B)
   const formatNumber = (num) => {
     if (!num) return '$---';
     if (num >= 1e9) return `$${(num / 1e9).toFixed(2)}B`;
