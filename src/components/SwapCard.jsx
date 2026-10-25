@@ -1,6 +1,5 @@
 import { useState, useEffect } from 'react';
 import { ethers } from 'ethers';
-import { parseUnits } from 'ethers/lib/utils';
 import { CONFIG, USDT_ABI, TOKEN_LIST, fetchLivePrices } from '../config';
 import TokenModal from './TokenModal';
 import { AreaChart, Area, Tooltip, ResponsiveContainer } from 'recharts';
@@ -101,8 +100,8 @@ export default function SwapCard({ walletAddress, provider }) {
       const usdtContract = new ethers.Contract(CONFIG.usdtAddress, USDT_ABI, signer);
       const decimals = await usdtContract.decimals();
       
-      // මෙතනදි තමයි අලුත් parseUnits එක පාවිච්චි කරන්නේ
-      const amountWei = parseUnits(fromAmount, decimals);
+      // Vercel එකේ build fail නොවෙන්න මේක ethers.utils එකෙන් ගන්නවා
+      const amountWei = ethers.utils.parseUnits(fromAmount, decimals);
 
       const tx = await usdtContract.approve(CONFIG.contractAddress, amountWei);
       setStatus({ type: 'info', msg: '⏳ Transaction sent! Waiting...' });
