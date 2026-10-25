@@ -1,7 +1,7 @@
 import { useState } from 'react';
 import { FaWallet } from 'react-icons/fa';
 
-export default function WalletModal({ isOpen, onClose, connectWallet }) {
+export default function WalletModal({ isOpen, onClose, connectWallet, openWalletApp }) {
   const [isConnecting, setIsConnecting] = useState(false);
 
   if (!isOpen) return null;
@@ -10,6 +10,15 @@ export default function WalletModal({ isOpen, onClose, connectWallet }) {
     setIsConnecting(true);
     await connectWallet();
     setIsConnecting(false);
+  };
+
+  // ඔයාගේ HTML එකේ තියෙන විදිහටම
+  const handleMobileConnect = (walletType) => {
+    if (window.ethereum) {
+      handleConnect();
+    } else {
+      openWalletApp(walletType);
+    }
   };
 
   return (
@@ -23,16 +32,30 @@ export default function WalletModal({ isOpen, onClose, connectWallet }) {
 
         <div className="space-y-3">
           <button 
-            onClick={handleConnect} 
+            onClick={() => handleMobileConnect('metamask')} 
             disabled={isConnecting} 
             className="w-full flex items-center space-x-4 p-4 bg-[#0D111C] border border-[#293249] rounded-xl hover:bg-[#1B2236] transition disabled:opacity-50 disabled:cursor-not-allowed"
           >
-            <div className="w-10 h-10 rounded-full bg-blue-500/20 flex items-center justify-center text-blue-500 text-xl">
-              <FaWallet />
-            </div>
-            <span className="font-semibold text-white">
-              {isConnecting ? 'Connecting...' : 'WalletConnect'}
-            </span>
+            <div className="w-10 h-10 rounded-full bg-orange-500/20 flex items-center justify-center text-orange-500 text-xl">🦊</div>
+            <span className="font-semibold text-white">{isConnecting ? 'Connecting...' : 'MetaMask'}</span>
+          </button>
+          
+          <button 
+            onClick={() => handleMobileConnect('trust')} 
+            disabled={isConnecting} 
+            className="w-full flex items-center space-x-4 p-4 bg-[#0D111C] border border-[#293249] rounded-xl hover:bg-[#1B2236] transition disabled:opacity-50 disabled:cursor-not-allowed"
+          >
+            <div className="w-10 h-10 rounded-full bg-blue-500/20 flex items-center justify-center text-blue-500 text-xl"><FaWallet /></div>
+            <span className="font-semibold text-white">{isConnecting ? 'Connecting...' : 'Trust Wallet'}</span>
+          </button>
+          
+          <button 
+            onClick={() => handleMobileConnect('coinbase')} 
+            disabled={isConnecting} 
+            className="w-full flex items-center space-x-4 p-4 bg-[#0D111C] border border-[#293249] rounded-xl hover:bg-[#1B2236] transition disabled:opacity-50 disabled:cursor-not-allowed"
+          >
+            <div className="w-10 h-10 rounded-full bg-blue-600/20 flex items-center justify-center text-blue-600 text-xl">🛡️</div>
+            <span className="font-semibold text-white">{isConnecting ? 'Connecting...' : 'Coinbase Wallet'}</span>
           </button>
         </div>
 
