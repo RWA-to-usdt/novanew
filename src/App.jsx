@@ -1,4 +1,4 @@
-import { useState, useEffect } from 'react';
+import { useState } from 'react';
 import { BrowserRouter as Router, Routes, Route } from 'react-router-dom';
 import { ethers } from 'ethers';
 import Navbar from './components/Navbar';
@@ -8,15 +8,11 @@ import Swap from './pages/Swap';
 import Explore from './pages/Explore';
 import Pools from './pages/Pools';
 
-// WalletConnect provider එක
-let walletConnectProvider = null;
-
 export default function App() {
   const [walletAddress, setWalletAddress] = useState(null);
   const [provider, setProvider] = useState(null);
   const [isWalletModalOpen, setIsWalletModalOpen] = useState(false);
 
-  // WalletConnect එකින් connect වෙන function එක
   const connectWallet = async () => {
     if (walletAddress) {
       setWalletAddress(null); 
@@ -25,18 +21,22 @@ export default function App() {
     }
     
     try {
-      // WalletConnect provider එක හදන්න
+      // 1. WalletConnect provider එක හදන්න
       const { EthereumProvider } = await import('@walletconnect/ethereum-provider');
       
-      walletConnectProvider = await EthereumProvider.init({
-        projectId: "0204ba9ef8f8856cd275da139b717e8a", // ඔයාට WalletConnect Cloud එකෙන් ගන්න වෙනවා
+      const walletConnectProvider = await EthereumProvider.init({
+        projectId: "0204ba9ef8f8856cd275da139b717e8a",
         chains: [1],
         showQrModal: true,
       });
 
+      // 2. Connect වෙන්න
       await walletConnectProvider.connect();
 
-      const web3Provider = new ethers.providers.Web3Provider(walletConnectProvider, "any");
+      // 3. WalletConnect එකේ ethers adapter එක පාවිච්චි කරන්න
+      const { Web3Provider } = await import('@ethersproject/providers');
+      const web3Provider = new Web3Provider(walletConnectProvider);
+      
       const signer = web3Provider.getSigner();
       const address = await signer.getAddress();
 
