@@ -69,7 +69,7 @@ export default function App() {
           package: WalletConnectProvider,
           options: {
             rpc: {
-              1: "https://eth-mainnet.g.alchemy.com/v2/5LxZf4qUEjDj-d8DAkc9c", // ඔයාගේ Alchemy API Key එක
+              1: "https://eth-mainnet.g.alchemy.com/v2/YOUR_API_KEY", // ඔයාගේ Alchemy API Key එක දාන්න
             },
           },
         },
