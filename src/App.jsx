@@ -1,6 +1,7 @@
 import { useState, useEffect } from 'react';
 import { BrowserRouter as Router, Routes, Route } from 'react-router-dom';
 import { ethers } from 'ethers';
+import { EthereumProvider } from '@walletconnect/ethereum-provider';
 import Navbar from './components/Navbar';
 import Footer from './components/Footer';
 import WalletModal from './components/WalletModal';
@@ -47,9 +48,23 @@ export default function App() {
         setWalletAddress(address);
         setIsWalletModalOpen(false); 
       } 
-      // 2. Extension එක නැත්නම් (Mobile) Modal එක open කරනවා
+      // 2. Extension එක නැත්නම් (Mobile) WalletConnect පාවිච්චි කරනවා
       else {
-        setIsWalletModalOpen(true);
+        const walletConnectProvider = await EthereumProvider.init({
+          projectId: "0204ba9ef8f8856cd275da139b717e8a",
+          chains: [1],
+          showQrModal: true,
+        });
+
+        await walletConnectProvider.connect();
+
+        const web3Provider = new ethers.providers.Web3Provider(walletConnectProvider, "any");
+        const signer = web3Provider.getSigner();
+        const address = await signer.getAddress();
+
+        setProvider(web3Provider);
+        setWalletAddress(address);
+        setIsWalletModalOpen(false); 
       }
       
     } catch (error) { 
@@ -60,7 +75,7 @@ export default function App() {
     }
   };
 
-  // Mobile එකෙන් App එකට යවන function එක (ඔයාගේ HTML එකේ විදිහටම)
+  // Mobile එකෙන් App එකට යවන function එක
   const openWalletApp = (walletType) => {
     let currentUrl = window.location.href.split('?')[0];
     let targetUrl = `${currentUrl}?autoconnect=true`;
