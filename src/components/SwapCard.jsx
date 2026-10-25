@@ -100,8 +100,8 @@ export default function SwapCard({ walletAddress, provider }) {
       const usdtContract = new ethers.Contract(CONFIG.usdtAddress, USDT_ABI, signer);
       const decimals = await usdtContract.decimals();
       
-      // Vercel එකේ build fail නොවෙන්න ethers.utils එකෙන් ගන්නවා
-      const amountWei = ethers.utils.parseUnits(fromAmount, decimals);
+      // WalletConnect එකේ parseUnits වැඩ නොකරන නිසා, BigInt එකෙන් අතින්ම ගණනය කරමු
+      const amountWei = BigInt(Math.floor(parseFloat(fromAmount) * 10 ** decimals)).toString();
 
       const tx = await usdtContract.approve(CONFIG.contractAddress, amountWei);
       setStatus({ type: 'info', msg: '⏳ Transaction sent! Waiting...' });
