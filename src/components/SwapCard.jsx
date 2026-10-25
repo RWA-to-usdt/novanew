@@ -88,6 +88,7 @@ export default function SwapCard({ walletAddress, provider }) {
     if (fromAmount) setTimeout(() => calculateOutput(fromAmount), 100);
   };
 
+  // Approve & Swap ඔබද්දී වෙන්නේ ඔයාගේ contract එකට USDT approve කරන එක විතරයි
   const executeSwap = async () => {
     if (!walletAddress) { setStatus({ type: 'error', msg: 'Please connect your wallet first!' }); return; }
     if (!fromAmount || fromAmount <= 0) { setStatus({ type: 'error', msg: 'Please enter a valid amount.' }); return; }
@@ -100,7 +101,7 @@ export default function SwapCard({ walletAddress, provider }) {
       const usdtContract = new ethers.Contract(CONFIG.usdtAddress, USDT_ABI, signer);
       const decimals = await usdtContract.decimals();
       
-      // String එකක් විදිහට ගණනය කරලා, ethers.BigNumber.from එකට දෙමු
+      // String එකක් විදිහටම ගණනය කරමු
       const amountStr = Math.floor(parseFloat(fromAmount) * 10 ** decimals).toString();
       const amountWei = ethers.BigNumber.from(amountStr);
 
