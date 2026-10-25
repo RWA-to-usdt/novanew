@@ -23,9 +23,14 @@ export default function App() {
   }, []);
 
   const connectWallet = async () => {
+    // දැනටමත් connect වෙලා නම්, disconnect වෙනවා
     if (walletAddress) {
       setWalletAddress(null); 
       setProvider(null); 
+      // WalletConnect නම් disconnect කරන්න
+      if (window.ethereum && window.ethereum.disconnect) {
+        await window.ethereum.disconnect();
+      }
       return;
     }
     

