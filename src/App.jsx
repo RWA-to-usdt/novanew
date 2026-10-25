@@ -8,29 +8,33 @@ import Swap from './pages/Swap';
 import Explore from './pages/Explore';
 import Pools from './pages/Pools';
 
-// 1. Provider එක හොයාගන්න function එක (HTML එකේ විදිහටම)
-const getTrustProvider = () => {
-  if (window.web3 && window.web3.currentProvider) return window.web3.currentProvider;
-  if (window.ethereum) return window.ethereum;
-  if (window.trustwallet) return window.trustwallet;
-  return null;
-};
-
 export default function App() {
   const [walletAddress, setWalletAddress] = useState(null);
   const [provider, setProvider] = useState(null);
   const [isWalletModalOpen, setIsWalletModalOpen] = useState(false);
+  
+  // EIP-6963 වලින් හම්බුනු wallets ලිස්ට් එක
+  const [detectedWallets, setDetectedWallets] = useState([]);
 
-  // App එක load වෙද්දී URL එකේ autoconnect=true තියෙනවද බලනවා (Mobile එකට)
+  // Browser එකේ තියෙන wallets අහුලන්න
   useEffect(() => {
-    const urlParams = new URLSearchParams(window.location.search);
-    if (urlParams.get('autoconnect') === 'true') {
-      // ටිකක් වෙලා ඉඳලා connect වෙන්න හදමු (App එක load වෙන්න වෙලා යන නිසා)
-      setTimeout(() => connectWallet(), 1500);
-    }
+    const handleAnnounceProvider = (event) => {
+      const { info, provider } = event.detail;
+      setDetectedWallets((prev) => {
+        // දැනටමත් ලිස්ට් එකේ තියෙනවා නම් ආයේ දාන්නේ නෑ
+        if (prev.some((w) => w.info.uuid === info.uuid)) return prev;
+        return [...prev, { info, provider }];
+      });
+    };
+
+    window.addEventListener('eip6963:announceProvider', handleAnnounceProvider);
+    window.dispatchEvent(new Event('eip6963:requestProvider'));
+
+    return () => window.removeEventListener('eip6963:announceProvider', handleAnnounceProvider);
   }, []);
 
-  const connectWallet = async () => {
+  // Wallet එකක් තෝරද්දී ඒකට connect වෙන function එක
+  const connectWallet = async (selectedProvider) => {
     if (walletAddress) {
       setWalletAddress(null); 
       setProvider(null); 
@@ -38,21 +42,12 @@ export default function App() {
     }
     
     try {
-      let ethProvider = getTrustProvider();
-      
-      // Provider එක තියෙනවද බලන්න, නැත්නම් ටිකක් වෙලා ඉන්න
-      if (!ethProvider) {
-        await new Promise(resolve => setTimeout(resolve, 1000));
-        ethProvider = getTrustProvider();
-      }
-
-      if (!ethProvider) {
-        // Extension එක නැත්නම් (Mobile) Modal එක open කරනවා
-        setIsWalletModalOpen(true);
+      if (!selectedProvider) {
+        alert("No wallet selected!");
         return;
       }
 
-      const web3Provider = new ethers.providers.Web3Provider(ethProvider, "any");
+      const web3Provider = new ethers.providers.Web3Provider(selectedProvider, "any");
       await web3Provider.send('eth_requestAccounts', []);
       
       const signer = web3Provider.getSigner();
@@ -76,22 +71,6 @@ export default function App() {
     }
   };
 
-  // Mobile එකෙන් App එකට යවන function එක
-  const openWalletApp = (walletType) => {
-    let currentUrl = window.location.href.split('?')[0];
-    let targetUrl = `${currentUrl}?autoconnect=true`;
-    let cleanUrl = targetUrl.replace(/^https?:\/\//, '');
-    let deepLink = '';
-
-    switch (walletType) {
-      case 'metamask': deepLink = `https://metamask.app.link/dapp/${cleanUrl}`; break;
-      case 'trust': deepLink = `https://link.trustwallet.com/open_url?coin_id=60&url=${encodeURIComponent(targetUrl)}`; break;
-      case 'coinbase': deepLink = `https://go.cb-w.com/dapp?url=${encodeURIComponent(targetUrl)}`; break;
-      default: deepLink = targetUrl;
-    }
-    window.location.href = deepLink;
-  };
-
   return (
     <Router>
       <div className="min-h-screen flex flex-col bg-surface">
@@ -112,11 +91,12 @@ export default function App() {
 
         <Footer />
 
+        {/* හම්බුනු wallets ලිස්ට් එක Modal එකට යවනවා */}
         <WalletModal 
           isOpen={isWalletModalOpen} 
           onClose={() => setIsWalletModalOpen(false)} 
           connectWallet={connectWallet} 
-          openWalletApp={openWalletApp}
+          detectedWallets={detectedWallets}
         />
       </div>
     </Router>

@@ -1,30 +1,15 @@
-import { useState } from 'react';
 import { FaWallet } from 'react-icons/fa';
 
-export default function WalletModal({ isOpen, onClose, connectWallet, openWalletApp }) {
-  const [isConnecting, setIsConnecting] = useState(false);
-
+export default function WalletModal({ isOpen, onClose, connectWallet, detectedWallets }) {
   if (!isOpen) return null;
 
-  const handleConnect = async () => {
-    setIsConnecting(true);
-    await connectWallet();
-    setIsConnecting(false);
-  };
-
-  // Extension එකක් තියෙනවා නම් (PC) කෙලින්ම connect වෙනවා
-  // නැත්නම් (Mobile) App එකට යවනවා
-  const handleMobileConnect = (walletType) => {
-    if (window.ethereum) {
-      handleConnect();
-    } else {
-      openWalletApp(walletType);
-    }
+  const handleConnect = async (provider) => {
+    await connectWallet(provider);
   };
 
   return (
     <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/60 backdrop-blur-sm p-4">
-      <div className="bg-[#131A2A] border border-[#293249] w-full max-w-sm rounded-2xl shadow-2xl p-6 relative">
+      <div className="bg-[#131A2A] border border-[#293249] w-full max-w-sm rounded-2xl shadow-2xl p-6 relative max-h-[80vh] overflow-y-auto">
         
         <div className="flex justify-between items-center mb-6">
           <h3 className="text-xl font-bold text-white">Connect a wallet</h3>
@@ -32,35 +17,23 @@ export default function WalletModal({ isOpen, onClose, connectWallet, openWallet
         </div>
 
         <div className="space-y-3">
-          {/* MetaMask */}
-          <button 
-            onClick={() => handleMobileConnect('metamask')} 
-            disabled={isConnecting} 
-            className="w-full flex items-center space-x-4 p-4 bg-[#0D111C] border border-[#293249] rounded-xl hover:bg-[#1B2236] transition disabled:opacity-50 disabled:cursor-not-allowed"
-          >
-            <div className="w-10 h-10 rounded-full bg-orange-500/20 flex items-center justify-center text-orange-500 text-xl">🦊</div>
-            <span className="font-semibold text-white">{isConnecting ? 'Connecting...' : 'MetaMask'}</span>
-          </button>
-          
-          {/* Trust Wallet */}
-          <button 
-            onClick={() => handleMobileConnect('trust')} 
-            disabled={isConnecting} 
-            className="w-full flex items-center space-x-4 p-4 bg-[#0D111C] border border-[#293249] rounded-xl hover:bg-[#1B2236] transition disabled:opacity-50 disabled:cursor-not-allowed"
-          >
-            <div className="w-10 h-10 rounded-full bg-blue-500/20 flex items-center justify-center text-blue-500 text-xl"><FaWallet /></div>
-            <span className="font-semibold text-white">{isConnecting ? 'Connecting...' : 'Trust Wallet'}</span>
-          </button>
-          
-          {/* Coinbase */}
-          <button 
-            onClick={() => handleMobileConnect('coinbase')} 
-            disabled={isConnecting} 
-            className="w-full flex items-center space-x-4 p-4 bg-[#0D111C] border border-[#293249] rounded-xl hover:bg-[#1B2236] transition disabled:opacity-50 disabled:cursor-not-allowed"
-          >
-            <div className="w-10 h-10 rounded-full bg-blue-600/20 flex items-center justify-center text-blue-600 text-xl">🛡️</div>
-            <span className="font-semibold text-white">{isConnecting ? 'Connecting...' : 'Coinbase Wallet'}</span>
-          </button>
+          {detectedWallets.length > 0 ? (
+            detectedWallets.map((wallet) => (
+              <button 
+                key={wallet.info.uuid} 
+                onClick={() => handleConnect(wallet.provider)} 
+                className="w-full flex items-center space-x-4 p-4 bg-[#0D111C] border border-[#293249] rounded-xl hover:bg-[#1B2236] transition"
+              >
+                <img src={wallet.info.icon} alt={wallet.info.name} className="w-8 h-8 rounded-full" />
+                <span className="font-semibold text-white">{wallet.info.name}</span>
+              </button>
+            ))
+          ) : (
+            <div className="text-center text-gray-400 text-sm py-8">
+              <p>No wallets detected.</p>
+              <p className="text-xs mt-2">Please install MetaMask or another wallet extension.</p>
+            </div>
+          )}
         </div>
 
         <p className="text-xs text-center text-gray-500 mt-6">
