@@ -23,19 +23,34 @@ export default function App() {
   }, []);
 
   const connectWallet = async () => {
-    // දැනටමත් connect වෙලා නම්, disconnect වෙනවා
+    // 1. දැනටමත් connect වෙලා නම් -> DISCONNECT
     if (walletAddress) {
-      setWalletAddress(null); 
-      setProvider(null); 
-      // WalletConnect නම් disconnect කරන්න
-      if (window.ethereum && window.ethereum.disconnect) {
-        await window.ethereum.disconnect();
+      try {
+        // WalletConnect data clear කරන්න
+        localStorage.removeItem('walletconnect');
+        localStorage.removeItem('WALLETCONNECT_DEEPLINK_CHOICE');
+        
+        // අලුත් එකක් තියෙනවා නම් ඒකත් clear කරන්න
+        Object.keys(localStorage).forEach(key => {
+          if (key.startsWith('wc@2')) {
+            localStorage.removeItem(key);
+          }
+        });
+
+        setWalletAddress(null); 
+        setProvider(null); 
+        
+        alert("Wallet Disconnected Successfully! Refresh the page to reconnect.");
+        window.location.reload(); // Page එක refresh කරන්න
+        
+      } catch (error) {
+        console.error(error);
       }
       return;
     }
     
+    // 2. අලුතින් connect වෙන්න
     try {
-      // 1. PC එකේ extension එක තියෙනවද බලනවා
       if (window.ethereum) {
         const web3Provider = new ethers.providers.Web3Provider(window.ethereum, "any");
         await web3Provider.send('eth_requestAccounts', []);
@@ -53,8 +68,8 @@ export default function App() {
         setWalletAddress(address);
         setIsWalletModalOpen(false); 
       } 
-      // 2. Extension එක නැත්නම් (Mobile) WalletConnect පාවිච්චි කරනවා
       else {
+        // Mobile WalletConnect
         const walletConnectProvider = await EthereumProvider.init({
           projectId: "0204ba9ef8f8856cd275da139b717e8a",
           chains: [1],

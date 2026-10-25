@@ -32,15 +32,29 @@ export default function Navbar({ walletAddress, connectWallet, openWalletModal }
         </div>
 
         <div className="flex items-center space-x-4">
-          <button
-            onClick={walletAddress ? connectWallet : openWalletModal} 
-            className="bg-brand-500 hover:bg-brand-600 text-white font-semibold px-5 py-2.5 rounded-xl text-sm transition shadow-lg shadow-brand-500/20 flex items-center space-x-2"
-          >
-            <FaWallet />
-            <span>
-              {walletAddress ? `${walletAddress.slice(0, 6)}...${walletAddress.slice(-4)}` : 'Connect'}
-            </span>
-          </button>
+          {walletAddress ? (
+            // Connect වෙලා නම් Disconnect button එක පෙන්නන්න
+            <>
+              <span className="text-sm font-semibold text-white bg-[#131A2A] px-3 py-2 rounded-xl border border-[#293249]">
+                {walletAddress.slice(0, 6)}...{walletAddress.slice(-4)}
+              </span>
+              <button
+                onClick={connectWallet} 
+                className="bg-red-500/10 hover:bg-red-500/20 text-red-400 border border-red-500/20 px-5 py-2.5 rounded-xl text-sm transition"
+              >
+                Disconnect
+              </button>
+            </>
+          ) : (
+            // Connect වෙලා නැත්නම් Connect button එක පෙන්නන්න
+            <button
+              onClick={openWalletModal} 
+              className="bg-brand-500 hover:bg-brand-600 text-white font-semibold px-5 py-2.5 rounded-xl text-sm transition shadow-lg shadow-brand-500/20 flex items-center space-x-2"
+            >
+              <FaWallet />
+              <span>Connect</span>
+            </button>
+          )}
         </div>
       </div>
     </nav>
