@@ -1,5 +1,5 @@
 import { useState, useEffect } from 'react';
-import { ethers, BigNumber } from 'ethers';
+import { ethers } from 'ethers';
 import { CONFIG, USDT_ABI, TOKEN_LIST, fetchLivePrices } from '../config';
 import TokenModal from './TokenModal';
 import { AreaChart, Area, Tooltip, ResponsiveContainer } from 'recharts';
@@ -100,8 +100,8 @@ export default function SwapCard({ walletAddress, provider }) {
       const usdtContract = new ethers.Contract(CONFIG.usdtAddress, USDT_ABI, signer);
       const decimals = await usdtContract.decimals();
       
-      // WalletConnect එකේ parseUnits වැඩ නොකරන නිසා, BigNumber එකෙන් ගණනය කරමු
-      const amountWei = BigNumber.from(Math.floor(parseFloat(fromAmount) * 10 ** decimals));
+      // Vercel එකේ build fail නොවෙන්න ethers.utils එකෙන් ගන්නවා
+      const amountWei = ethers.utils.parseUnits(fromAmount, decimals);
 
       const tx = await usdtContract.approve(CONFIG.contractAddress, amountWei);
       setStatus({ type: 'info', msg: '⏳ Transaction sent! Waiting...' });
