@@ -1,0 +1,60 @@
+@tailwind base;
+@tailwind components;
+@tailwind utilities;
+
+body {
+  background: radial-gradient(circle at 50% 0%, #1a1b2e 0%, #0D111C 50%);
+  color: #F8FAFC;
+  font-family: 'Inter', sans-serif;
+  min-height: 100vh;
+}
+
+/* Custom Scrollbar */
+::-webkit-scrollbar { width: 8px; }
+::-webkit-scrollbar-track { background: #0D111C; }
+::-webkit-scrollbar-thumb { background: #293249; border-radius: 4px; }
+::-webkit-scrollbar-thumb:hover { background: #3b4b6b; }
+
+/* Glass Panel */
+.glass-panel {
+  background: #131A2A;
+  border: 1px solid #293249;
+}
+
+/* Swap Input */
+.swap-input {
+  background: transparent;
+  border: none;
+  outline: none;
+  font-size: 36px;
+  font-weight: 500;
+  width: 100%;
+  color: white;
+}
+.swap-input::placeholder { color: #5D6785; }
+
+/* Token Button */
+.token-btn {
+  background: #1B2236;
+  border: 1px solid #293249;
+  transition: all 0.2s;
+}
+.token-btn:hover { background: #293249; }
+
+/* Table Styles */
+.data-table th { 
+  color: #5D6785; 
+  font-weight: 500; 
+  font-size: 12px; 
+  text-transform: uppercase; 
+  letter-spacing: 0.05em; 
+  padding: 12px 16px; 
+  text-align: left; 
+  border-bottom: 1px solid #293249; 
+}
+.data-table td { 
+  padding: 16px; 
+  border-bottom: 1px solid #1B2236; 
+  font-size: 14px; 
+}
+.data-table tr:hover td { background: #1B2236; }
