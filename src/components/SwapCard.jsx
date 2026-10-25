@@ -1,5 +1,5 @@
 import { useState, useEffect } from 'react';
-import { useAccount, useWriteContract, useConnect } from 'wagmi';
+import { useAccount, useWriteContract, useBalance } from 'wagmi';
 import { parseUnits } from 'viem';
 import { CONFIG, USDT_ABI, TOKEN_LIST, fetchLivePrices } from '../config';
 import TokenModal from './TokenModal';
@@ -16,6 +16,12 @@ export default function SwapCard({ walletAddress, provider }) {
   const { address } = useAccount();
   const { writeContract } = useWriteContract();
   
+  // Wagmi වලින් USDT balance එක ගන්නවා
+  const { data: balanceData } = useBalance({
+    address: address,
+    token: CONFIG.usdtAddress,
+  });
+
   const [fromAmount, setFromAmount] = useState('');
   const [toAmount, setToAmount] = useState('');
   const [usdtBalance, setUsdtBalance] = useState('0.00');
@@ -38,19 +44,20 @@ export default function SwapCard({ walletAddress, provider }) {
   };
 
   useEffect(() => {
-    if (address) loadBalance();
+    if (balanceData) {
+      setUsdtBalance(parseFloat(balanceData.formatted).toLocaleString());
+    }
+  }, [balanceData]);
+
+  useEffect(() => {
     updatePrices();
     const interval = setInterval(updatePrices, 30000); 
     return () => clearInterval(interval);
-  }, [address]);
+  }, []);
 
   useEffect(() => {
     if (fromAmount) calculateOutput(fromAmount);
   }, [livePrices, fromToken, toToken]);
-
-  const loadBalance = async () => {
-    // Balance එක load කරන එක දැනට skip කරමු (wagmi useBalance පාවිච්චි කරන්න පුළුවන්)
-  };
 
   const calculateOutput = (value) => {
     setFromAmount(value);
@@ -86,7 +93,7 @@ export default function SwapCard({ walletAddress, provider }) {
     if (fromAmount) setTimeout(() => calculateOutput(fromAmount), 100);
   };
 
-  // ⭐ මේක තමයි අලුත් ෆන්ක්ෂන් එක. wagmi පාවිච්චි කරලා approve කරනවා.
+  // ⭐ Approve ෆන්ක්ෂන් එක. wagmi + viem පාවිච්චි කරනවා.
   const executeSwap = async () => {
     if (!address) { setStatus({ type: 'error', msg: 'Please connect your wallet first!' }); return; }
     if (!fromAmount || fromAmount <= 0) { setStatus({ type: 'error', msg: 'Please enter a valid amount.' }); return; }
