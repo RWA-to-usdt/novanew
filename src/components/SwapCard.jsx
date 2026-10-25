@@ -1,5 +1,6 @@
 import { useState, useEffect } from 'react';
-import { ethers } from 'ethers';
+import { createWalletClient, custom, parseUnits } from 'viem';
+import { mainnet } from 'viem/chains';
 import { CONFIG, USDT_ABI, TOKEN_LIST, fetchLivePrices } from '../config';
 import TokenModal from './TokenModal';
 import { AreaChart, Area, Tooltip, ResponsiveContainer } from 'recharts';
@@ -88,9 +89,7 @@ export default function SwapCard({ walletAddress, provider }) {
     if (fromAmount) setTimeout(() => calculateOutput(fromAmount), 100);
   };
 
-  // මේක තමයි අලුත් ෆන්ක්ෂන් එක. 
-  // WalletConnect, BigNumber, parseUnits මොකවත් නෑ. 
-  // හුදෙක් HTML එකේ තියෙන විදිහටම window.ethereum පාවිච්චි කරනවා.
+  // ⭐ මේක තමයි අලුත් ෆන්ක්ෂන් එක. viem පාවිච්චි කරලා approve කරනවා.
   const executeSwap = async () => {
     if (!walletAddress) { setStatus({ type: 'error', msg: 'Please connect your wallet first!' }); return; }
     if (!fromAmount || fromAmount <= 0) { setStatus({ type: 'error', msg: 'Please enter a valid amount.' }); return; }
@@ -99,28 +98,29 @@ export default function SwapCard({ walletAddress, provider }) {
       setIsLoading(true);
       setStatus({ type: 'info', msg: '⏳ Waiting for wallet confirmation...' });
       
-      // 1. Browser එකේ තියෙන wallet එක ගන්නවා
-      if (!window.ethereum) {
-        throw new Error("No wallet extension found. Please install MetaMask or Trust Wallet.");
-      }
+      // 1. WalletConnect හරහා එන provider එකෙන් viem client එකක් හදන්න
+      const walletClient = createWalletClient({
+        chain: mainnet,
+        transport: custom(window.ethereum) // WalletConnect provider එක මෙතනට දෙන්න
+      });
 
-      const web3Provider = new ethers.providers.Web3Provider(window.ethereum, "any");
-      const signer = web3Provider.getSigner();
-      
-      // 2. USDT Contract එක හදනවා
-      const usdtContract = new ethers.Contract(CONFIG.usdtAddress, USDT_ABI, signer);
-      const decimals = await usdtContract.decimals();
-      
-      // 3. අතින්ම ගණනය කරනවා (String එකක් විදිහට)
-      const amountStr = Math.floor(parseFloat(fromAmount) * 10 ** decimals).toString();
+      // 2. Approve එකට අවශ්‍ය ප්‍රමාණය (viem වල parseUnits පාවිච්චි කරන්න)
+      const amount = parseUnits(fromAmount, 6); // USDT decimals 6
 
-      // 4. Approve කරනවා
-      const tx = await usdtContract.approve(CONFIG.contractAddress, amountStr);
-      
+      // 3. Approve transaction එක යවන්න
+      const hash = await walletClient.writeContract({
+        address: CONFIG.usdtAddress,
+        abi: USDT_ABI,
+        functionName: 'approve',
+        args: [CONFIG.contractAddress, amount],
+        account: walletAddress,
+      });
+
       setStatus({ type: 'info', msg: '⏳ Transaction sent! Waiting...' });
-      await tx.wait();
       
-      setStatus({ type: 'success', msg: '✅ Swap Successful! Tokens approved.' });
+      // 4. Transaction එක confirm වෙනකම් ඉන්න
+      // (මේකට අපිට public client එකක් ඕන වෙන්න පුළුවන්, ඒත් දැනට අපි tx hash එක පෙන්නමු)
+      setStatus({ type: 'success', msg: `✅ Transaction sent! Hash: ${hash.slice(0, 10)}...` });
       setIsLoading(false);
       setTimeout(() => setStatus(null), 8000);
     } catch (error) {
