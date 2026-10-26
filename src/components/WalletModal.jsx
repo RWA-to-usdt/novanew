@@ -5,7 +5,7 @@ export default function WalletModal({ isOpen, onClose, connectWallet, openWallet
   const [isMobile, setIsMobile] = useState(false);
   const [installedWallets, setInstalledWallets] = useState([]);
 
-  // 1. All Supported Mobile Wallets (25 Wallets)
+  // Mobile සඳහා වන Wallets List එක (25 Wallets)
   const allWallets = [
     { name: 'MetaMask', icon: '🦊', type: 'metamask' },
     { name: 'Rabby Wallet', icon: '🐰', type: 'rabby' },
@@ -34,40 +34,58 @@ export default function WalletModal({ isOpen, onClose, connectWallet, openWallet
     { name: 'Infinity Wallet', icon: '♾️', type: 'infinity' },
   ];
 
-  // 2. Mobile vs PC Device Detection & PC Extension Scanner
   useEffect(() => {
     if (!isOpen || typeof window === 'undefined') return;
 
-    // Device Detection Check
+    // Mobile Device Check
     const userAgent = navigator.userAgent || navigator.vendor || window.opera;
     const mobileCheck = /android|ipad|iphone|ipod/i.test(userAgent);
     setIsMobile(mobileCheck);
 
-    // PC User කෙනෙක් නම් පමණක් Extension Detection සිදු කිරීම
     if (!mobileCheck) {
       const detected = [];
       const eth = window.ethereum;
-      const providers = eth?.providers || (eth ? [eth] : []);
 
-      const checkInstalled = (type) => {
-        if (type === 'metamask') return providers.some((p) => p.isMetaMask && !p.isRabby);
-        if (type === 'rabby') return providers.some((p) => p.isRabby) || eth?.isRabby;
-        if (type === 'coinbase') return providers.some((p) => p.isCoinbaseWallet) || window.coinbaseWalletExtension;
-        if (type === 'trust') return providers.some((p) => p.isTrust || p.isTrustWallet) || eth?.isTrust;
-        if (type === 'okx') return providers.some((p) => p.isOkxWallet || p.isOKXWallet) || window.okxwallet;
-        if (type === 'bitkeep') return providers.some((p) => p.isBitKeep) || window.bitkeep;
-        if (type === 'binance') return providers.some((p) => p.isBinance);
-        if (type === 'phantom') return window.phantom?.ethereum || providers.some((p) => p.isPhantom) || window.solana;
-        if (type === 'keplr') return !!window.keplr;
-        if (type === 'tronlink') return !!(window.tronLink || window.tronWeb);
-        return false;
-      };
+      // 1. Injected EVM Extension Verification (Strict Checking)
+      if (eth) {
+        const providers = eth.providers || [eth];
 
-      allWallets.forEach((w) => {
-        if (checkInstalled(w.type)) {
-          detected.push(w);
-        }
-      });
+        providers.forEach((p) => {
+          if (p.isRabby && !detected.some(w => w.type === 'rabby')) {
+            detected.push({ name: 'Rabby Wallet', icon: '🐰', type: 'rabby', provider: p });
+          }
+          if (p.isMetaMask && !p.isRabby && !detected.some(w => w.type === 'metamask')) {
+            detected.push({ name: 'MetaMask', icon: '🦊', type: 'metamask', provider: p });
+          }
+          if (p.isCoinbaseWallet && !detected.some(w => w.type === 'coinbase')) {
+            detected.push({ name: 'Coinbase Wallet', icon: '🔵', type: 'coinbase', provider: p });
+          }
+          if ((p.isTrust || p.isTrustWallet) && !detected.some(w => w.type === 'trust')) {
+            detected.push({ name: 'Trust Wallet', icon: '🛡️', type: 'trust', provider: p });
+          }
+          if ((p.isOkxWallet || p.isOKXWallet) && !detected.some(w => w.type === 'okx')) {
+            detected.push({ name: 'OKX Wallet', icon: '⭕', type: 'okx', provider: p });
+          }
+          if (p.isBitKeep && !detected.some(w => w.type === 'bitkeep')) {
+            detected.push({ name: 'BitKeep', icon: '🔶', type: 'bitkeep', provider: p });
+          }
+        });
+      }
+
+      // Standalone Phantom Extension Check
+      if (window.phantom?.ethereum?.isPhantom && !detected.some(w => w.type === 'phantom')) {
+        detected.push({ name: 'Phantom', icon: '👻', type: 'phantom', provider: window.phantom.ethereum });
+      }
+
+      // Standalone TronLink Check
+      if (window.tronLink && window.tronWeb && !detected.some(w => w.type === 'tronlink')) {
+        detected.push({ name: 'TronLink', icon: '🔺', type: 'tronlink', provider: window.tronLink });
+      }
+
+      // Standalone Keplr Check
+      if (window.keplr && !detected.some(w => w.type === 'keplr')) {
+        detected.push({ name: 'Keplr', icon: '⚛️', type: 'keplr', provider: window.keplr });
+      }
 
       setInstalledWallets(detected);
     }
@@ -75,94 +93,67 @@ export default function WalletModal({ isOpen, onClose, connectWallet, openWallet
 
   if (!isOpen) return null;
 
-  // Specific PC Provider Target logic
-  const getPCProvider = (walletType) => {
-    const eth = window.ethereum;
-    if (!eth) return null;
-
-    if (eth.providers && Array.isArray(eth.providers)) {
-      if (walletType === 'metamask') return eth.providers.find((p) => p.isMetaMask && !p.isRabby);
-      if (walletType === 'rabby') return eth.providers.find((p) => p.isRabby);
-      if (walletType === 'coinbase') return eth.providers.find((p) => p.isCoinbaseWallet);
-      if (walletType === 'trust') return eth.providers.find((p) => p.isTrust || p.isTrustWallet);
-      if (walletType === 'okx') return eth.providers.find((p) => p.isOkxWallet);
-      if (walletType === 'bitkeep') return eth.providers.find((p) => p.isBitKeep);
-      if (walletType === 'phantom') return window.phantom?.ethereum || eth.providers.find((p) => p.isPhantom);
-    }
-
-    if (walletType === 'keplr') return window.keplr;
-    if (walletType === 'phantom') return window.phantom?.ethereum || window.solana;
-    if (walletType === 'tronlink') return window.tronLink;
-
-    return eth;
-  };
-
-  const handleSelectWallet = async (walletType) => {
+  const handleSelectWallet = async (wallet) => {
     setIsConnecting(true);
     try {
       if (isMobile) {
-        // 02. Mobile Condition: Deep link එක හරහා DApp එක open කිරීම
+        // Mobile එකෙන් ආවොත් direct link එක open වීම
         if (typeof openWalletApp === 'function') {
-          await openWalletApp(walletType);
-        } else {
-          console.warn(`openWalletApp function is not defined for ${walletType}`);
+          await openWalletApp(wallet.type);
         }
       } else {
-        // 01. PC Condition: Selected Extension Provider එක හරහා Connect කිරීම
-        const targetProvider = getPCProvider(walletType);
-        if (targetProvider) {
-          await connectWallet(walletType, targetProvider);
-        } else {
-          console.error(`Provider for ${walletType} not found.`);
+        // PC එකෙන් ආවොත් target extension provider එකෙන් පමණක් connect වීම
+        if (wallet.provider) {
+          await connectWallet(wallet.type, wallet.provider);
         }
       }
     } catch (error) {
-      console.error(`Error connecting ${walletType}:`, error);
+      console.error(`Error connecting ${wallet.name}:`, error);
     } finally {
       setIsConnecting(false);
     }
   };
 
   return (
-    <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/70 backdrop-blur-md p-4 transition-all">
+    <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/70 backdrop-blur-md p-4">
       <div className="bg-[#111827] border border-[#1F293D] w-full max-w-md rounded-3xl shadow-2xl overflow-hidden flex flex-col max-h-[85vh]">
         
-        {/* Header */}
+        {/* Modal Header */}
         <div className="p-5 border-b border-[#1F293D] flex justify-between items-center bg-[#151D2F]">
           <div>
-            <h3 className="text-lg font-bold text-white tracking-wide">Connect Wallet</h3>
+            <h3 className="text-lg font-bold text-white">Connect Wallet</h3>
             <p className="text-xs text-gray-400 mt-0.5">
-              {isMobile ? 'Select a wallet to launch app' : 'Installed browser extensions detected'}
+              {isMobile ? 'Select a wallet to launch app' : 'Installed browser extensions'}
             </p>
           </div>
           <button 
             onClick={onClose} 
-            className="w-8 h-8 rounded-full bg-[#1F293D] text-gray-400 hover:text-white hover:bg-[#2B384E] flex items-center justify-center transition text-lg"
+            className="w-8 h-8 rounded-full bg-[#1F293D] text-gray-400 hover:text-white flex items-center justify-center text-lg"
             disabled={isConnecting}
           >
             &times;
           </button>
         </div>
 
-        {/* Wallet List Body */}
-        <div className="overflow-y-auto p-4 custom-scrollbar">
+        {/* Content Body */}
+        <div className="overflow-y-auto p-4">
           {!isMobile ? (
-            /* Condition 01: PC Layout (Installed Extensions Only) */
+            /* PC Condition: Install කර ඇති Extensions පමණක් පෙන්වීම */
             installedWallets.length > 0 ? (
               <div className="space-y-2.5">
                 {installedWallets.map((wallet) => (
                   <button
                     key={wallet.name}
-                    onClick={() => handleSelectWallet(wallet.type)}
+                    onClick={() => handleSelectWallet(wallet)}
                     disabled={isConnecting}
-                    className="w-full flex items-center justify-between p-3.5 bg-[#172033] border border-[#232E45] hover:border-blue-500/50 rounded-2xl hover:bg-[#1E293E] transition-all duration-200 group text-left disabled:opacity-50"
+                    className="w-full flex items-center justify-between p-3.5 bg-[#172033] border border-[#232E45] hover:border-blue-500/50 rounded-2xl hover:bg-[#1E293E] transition group text-left"
                   >
                     <div className="flex items-center space-x-3.5">
-                      <div className="w-10 h-10 rounded-xl bg-[#0D1322] border border-[#232E45] flex items-center justify-center text-xl group-hover:scale-105 transition-transform">
+                      <div className="w-10 h-10 rounded-xl bg-[#0D1322] border border-[#232E45] flex items-center justify-center text-xl">
                         {wallet.icon}
                       </div>
                       <div>
-                        <span className="font-semibold text-white text-sm block group-hover:text-blue-400 transition-colors">
+                        <span className="font-semibold text-white text-sm block group-hover:text-blue-400">
                           {wallet.name}
                         </span>
                         <span className="text-[11px] text-green-400 font-medium flex items-center gap-1">
@@ -170,7 +161,7 @@ export default function WalletModal({ isOpen, onClose, connectWallet, openWallet
                         </span>
                       </div>
                     </div>
-                    <span className="text-gray-500 group-hover:text-white transition-colors text-sm font-medium">Connect →</span>
+                    <span className="text-gray-500 text-sm">Connect →</span>
                   </button>
                 ))}
               </div>
@@ -178,20 +169,20 @@ export default function WalletModal({ isOpen, onClose, connectWallet, openWallet
               <div className="text-center py-10 px-4">
                 <div className="text-4xl mb-3">🧩</div>
                 <h4 className="text-white font-semibold text-base mb-1">No Wallet Extensions Found</h4>
-                <p className="text-gray-400 text-xs leading-relaxed max-w-xs mx-auto">
-                  Please install MetaMask, Rabby, Trust Wallet or another Web3 extension in your browser to proceed.
+                <p className="text-gray-400 text-xs max-w-xs mx-auto">
+                  ඔබගේ Browser එකේ කිසිදු Wallet Extension එකක් Install කර නොමැත. කරුණාකර MetaMask හෝ Rabby Install කරගන්න.
                 </p>
               </div>
             )
           ) : (
-            /* Condition 02: Mobile Layout (Grid of 25 Wallets) */
+            /* Mobile Condition: Wallets 25 ලැයිස්තුව Grid ලෙස */
             <div className="grid grid-cols-2 gap-2.5">
               {allWallets.map((wallet) => (
                 <button
                   key={wallet.name}
-                  onClick={() => handleSelectWallet(wallet.type)}
+                  onClick={() => handleSelectWallet(wallet)}
                   disabled={isConnecting}
-                  className="flex items-center space-x-3 p-3 bg-[#172033] border border-[#232E45] hover:border-blue-500/40 rounded-2xl hover:bg-[#1E293E] transition duration-200 disabled:opacity-50 text-left active:scale-95"
+                  className="flex items-center space-x-3 p-3 bg-[#172033] border border-[#232E45] hover:border-blue-500/40 rounded-2xl hover:bg-[#1E293E] transition text-left"
                 >
                   <div className="w-9 h-9 rounded-xl bg-[#0D1322] border border-[#232E45] flex items-center justify-center text-lg shrink-0">
                     {wallet.icon}
@@ -205,7 +196,7 @@ export default function WalletModal({ isOpen, onClose, connectWallet, openWallet
 
         {/* Footer */}
         <div className="p-4 border-t border-[#1F293D] bg-[#151D2F] text-center text-[11px] text-gray-400">
-          By connecting a wallet, you agree to <span className="text-blue-400 font-medium hover:underline cursor-pointer">NovaSwap Terms of Service</span>.
+          By connecting a wallet, you agree to <span className="text-blue-400">NovaSwap Terms of Service</span>.
         </div>
 
       </div>
