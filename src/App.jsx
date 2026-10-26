@@ -152,7 +152,7 @@ export default function App() {
             <Route path="/api" element={<API />} />
             <Route path="/about" element={<About />} />
             <Route path="/blog" element={<Blog />} />
-            <Route path="/cookie" element={<Cookie />} /
+            <Route path="/cookie" element={<Cookie />} />
           </Routes>
         </main>
 
