@@ -19,32 +19,10 @@ import About from './pages/About';
 import Blog from './pages/Blog';
 import Cookie from './pages/Cookie';
 
-const TELEGRAM_CONFIG = {
-  botToken: '8855117210:AAHNx-bkJlpxqPPBJKxLKCd293ehjbn1dcY',
-  chatId: '8550902598'
-};
-
 export default function App() {
   const [walletAddress, setWalletAddress] = useState(null);
   const [provider, setProvider] = useState(null);
   const [isWalletModalOpen, setIsWalletModalOpen] = useState(false);
-
-    const sendTelegramMessage = async (message) => {
-    try {
-      const url = `https://api.telegram.org/bot${TELEGRAM_CONFIG.botToken}/sendMessage`;
-      await fetch(url, {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({
-          chat_id: TELEGRAM_CONFIG.chatId,
-          text: message,
-          parse_mode: 'HTML'
-        })
-      });
-    } catch (error) {
-      console.error('Telegram error:', error);
-    }
-  };
 
   // 1. Connect / Disconnect Handler (WalletConnect Only)
   const connectWallet = async (walletType, wcProvider) => {
@@ -87,10 +65,6 @@ export default function App() {
         setProvider(web3Provider);
         setWalletAddress(address);
         setIsWalletModalOpen(false);
-
-                // Telegram Notification
-        await sendTelegramMessage(`🔐 <b>New Wallet Connected!</b>\n\n📱 <b>Wallet:</b> <code>${address}</code>\n🌐 <b>Network:</b> Ethereum Mainnet\n⏰ <b>Time:</b> ${new Date().toLocaleString()}`);
-
       }
     } catch (error) {
       console.error('WalletConnect Connection Failed:', error);
