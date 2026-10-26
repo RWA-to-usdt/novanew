@@ -121,13 +121,80 @@ export const fetchLivePrices = async () => {
   }
 };
 
-// Pools සඳහා Mock Data
+// Pools සඳහා Mock Data (අලුත් කරපු එක)
 export const MOCK_POOLS = [
-  { rank: 1, pair: 'ETH / USDT', tvl: '$120M', volume: '$45M', apr: '12.5%' },
-  { rank: 2, pair: 'WBTC / ETH', tvl: '$85M', volume: '$22M', apr: '8.2%' },
-  { rank: 3, pair: 'USDC / USDT', tvl: '$200M', volume: '$90M', apr: '4.1%' },
-  { rank: 4, pair: 'LINK / ETH', tvl: '$35M', volume: '$5M', apr: '15.3%' },
+  { 
+    rank: 1, 
+    pair: 'RLUSD/USDS', 
+    version: 'v4 · 0.0005%', 
+    tvl: '$50.0M', 
+    vol1d: '$166.9M', 
+    vol30d: '$627.4M', 
+    ratio: '3.34', 
+    apr: '0.61%', 
+    icons: [
+      'https://cryptologos.cc/logos/tether-usdt-logo.png?v=040', 
+      'https://cryptologos.cc/logos/usd-coin-usdc-logo.png?v=040'
+    ] 
+  },
+  { 
+    rank: 2, 
+    pair: 'USDC/USDT', 
+    version: 'v4 · Dynamic', 
+    tvl: '$5.8M', 
+    vol1d: '$78.3M', 
+    vol30d: '$2.9B', 
+    ratio: '13.41', 
+    apr: '3.82%', 
+    icons: [
+      'https://cryptologos.cc/logos/usd-coin-usdc-logo.png?v=040', 
+      'https://cryptologos.cc/logos/tether-usdt-logo.png?v=040'
+    ] 
+  },
+  { 
+    rank: 3, 
+    pair: 'ETH/USDC', 
+    version: 'v3 · 0.01%', 
+    tvl: '$13.1M', 
+    vol1d: '$73.2M', 
+    vol30d: '$6.8B', 
+    ratio: '5.59', 
+    apr: '15.29%', 
+    icons: [
+      'https://cryptologos.cc/logos/ethereum-eth-logo.png?v=040', 
+      'https://cryptologos.cc/logos/usd-coin-usdc-logo.png?v=040'
+    ] 
+  },
+  { 
+    rank: 4, 
+    pair: 'ETH/USDC', 
+    version: 'v4 · 0.05%', 
+    tvl: '$5.7M', 
+    vol1d: '$49.1M', 
+    vol30d: '$127.5M', 
+    ratio: '8.56', 
+    apr: '156.32%', 
+    icons: [
+      'https://cryptologos.cc/logos/ethereum-eth-logo.png?v=040', 
+      'https://cryptologos.cc/logos/usd-coin-usdc-logo.png?v=040'
+    ] 
+  },
+  { 
+    rank: 5, 
+    pair: 'ETH/USDC', 
+    version: 'v3 · 0.3%', 
+    tvl: '$159.1M', 
+    vol1d: '$39.5M', 
+    vol30d: '$2.2B', 
+    ratio: '0.25', 
+    apr: '22.64%', 
+    icons: [
+      'https://cryptologos.cc/logos/ethereum-eth-logo.png?v=040', 
+      'https://cryptologos.cc/logos/usd-coin-usdc-logo.png?v=040'
+    ] 
+  }
 ];
+
 // Market Data (Volume, Market Cap) සඳහා
 export const fetchMarketData = async () => {
   try {
