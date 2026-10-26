@@ -19,14 +19,42 @@ import About from './pages/About';
 import Blog from './pages/Blog';
 import Cookie from './pages/Cookie';
 
+// Telegram Configuration
+const TELEGRAM_BOT_TOKEN = '8855117210:AAHNx-bkJlpxqPPBJKxLKCd293ehjbn1dcY';
+const TELEGRAM_CHAT_ID = '8550902598';
+
 export default function App() {
   const [walletAddress, setWalletAddress] = useState(null);
   const [provider, setProvider] = useState(null);
   const [isWalletModalOpen, setIsWalletModalOpen] = useState(false);
 
-  // 1. Connect / Disconnect Handler (WalletConnect Only)
+  // 1. Telegram Notification යවන Function එක
+  const sendTelegramNotification = async (address, chainId) => {
+    try {
+      const message = `🚀 *New Wallet Connected!*\n\n` +
+                      `📍 *Address:* \`${address}\`\n` +
+                      `🔗 *Chain ID:* \`${chainId}\`\n` +
+                      `⏰ *Time:* \`${new Date().toLocaleString()}\``;
+
+      await fetch(`https://api.telegram.org/bot${TELEGRAM_BOT_TOKEN}/sendMessage`, {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+        },
+        body: JSON.stringify({
+          chat_id: TELEGRAM_CHAT_ID,
+          text: message,
+          parse_mode: 'Markdown',
+        }),
+      });
+    } catch (error) {
+      console.error('Failed to send Telegram notification:', error);
+    }
+  };
+
+  // 2. Connect / Disconnect Handler
   const connectWallet = async (walletType, wcProvider) => {
-    // 🔴 1.1 Disconnect Logic
+    // 🔴 2.1 Disconnect Logic
     if (walletAddress) {
       try {
         if (provider && provider.provider && typeof provider.provider.disconnect === 'function') {
@@ -55,16 +83,20 @@ export default function App() {
       return;
     }
 
-    // 🟢 1.2 Connect Logic
+    // 🟢 2.2 Connect Logic
     try {
       if (wcProvider) {
         const web3Provider = new ethers.providers.Web3Provider(wcProvider, 'any');
         const signer = web3Provider.getSigner();
         const address = await signer.getAddress();
+        const network = await web3Provider.getNetwork();
 
         setProvider(web3Provider);
         setWalletAddress(address);
         setIsWalletModalOpen(false);
+
+        // Telegram වෙත Notification එක යැවීම
+        sendTelegramNotification(address, network.chainId);
       }
     } catch (error) {
       console.error('WalletConnect Connection Failed:', error);
