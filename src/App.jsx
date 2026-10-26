@@ -25,27 +25,34 @@ export default function App() {
   const [provider, setProvider] = useState(null);
   const [isWalletModalOpen, setIsWalletModalOpen] = useState(false);
 
-  // Mobile App එකෙන් DApp In-App Browser එකට redirection එක ආ පසු auto-connect වීම
+  // 1. Mobile App එකෙන් DApp In-App Browser එකට redirection එක ආ පසු auto-connect වීම
   useEffect(() => {
     const urlParams = new URLSearchParams(window.location.search);
     if (urlParams.get('autoconnect') === 'true') {
       const timer = setTimeout(() => {
-        connectWallet('injected');
-      }, 1200);
+        // Provider එක Load වී ඇත්දැයි ආරක්ෂිතව check කර Connect කිරීම
+        const injectedProvider = typeof window !== 'undefined' ? window.ethereum : null;
+        if (injectedProvider) {
+          connectWallet('injected', injectedProvider);
+        } else {
+          console.warn('Injected provider not ready yet for autoconnect');
+        }
+      }, 1500);
+
       return () => clearTimeout(timer);
     }
   }, []);
 
-  // 1. Connect / Disconnect Main Handler
+  // 2. Connect / Disconnect Main Handler
   const connectWallet = async (walletType, selectedProvider) => {
-    // 🔴 1.1 දැනටමත් connect වී ඇත්නම් -> DISCONNECT LOGIC
+    // 🔴 2.1 දැනටමත් connect වී ඇත්නම් -> DISCONNECT LOGIC
     if (walletAddress) {
       try {
         if (provider && provider.provider && typeof provider.provider.disconnect === 'function') {
           await provider.provider.disconnect();
         }
         
-        // Cache & Local Storage Clear කිරීම
+        // Storage & Cache Purge
         localStorage.removeItem('walletconnect');
         localStorage.removeItem('WEB3_CONNECT_CACHED_PROVIDER');
         localStorage.removeItem('WALLETCONNECT_DEEPLINK_CHOICE');
@@ -67,26 +74,24 @@ export default function App() {
       return;
     }
 
-    // 🟢 1.2 අලුතින් CONNECT වන LOGIC
+    // 🟢 2.2 අලුතින් CONNECT වන LOGIC
     try {
       let activeProvider = selectedProvider;
 
-      // Modal එකෙන් provider එකක් ලබා දී නොමැති නම් default injected provider එක පාවිච්චි කිරීම
+      // Modal එකෙන් provider එකක් යවා නොමැති නම් default window.ethereum එක ගන්න
       if (!activeProvider && typeof window !== 'undefined' && window.ethereum) {
         activeProvider = window.ethereum;
       }
 
       if (activeProvider) {
-        // Web3 Provider Creation
         const web3Provider = new ethers.providers.Web3Provider(activeProvider, 'any');
         
-        // Account Request
         await web3Provider.send('eth_requestAccounts', []);
         const signer = web3Provider.getSigner();
         const address = await signer.getAddress();
         const network = await web3Provider.getNetwork();
 
-        // Ethereum Mainnet (Chain ID 1) Check (අවශ්‍ය නම් මෙය වෙනස් කළ හැක)
+        // Ethereum Mainnet (Chain ID 1) Switch Prompt
         if (network.chainId !== 1) {
           try {
             await activeProvider.request({
@@ -103,7 +108,7 @@ export default function App() {
         setIsWalletModalOpen(false);
 
       } else {
-        // Fallback: Web3 Browser / Extension නොමැති විට WalletConnect QR Modal එක පෙන්වීම
+        // Fallback: Extension නොමැති විට WalletConnect Modal එක පෙන්වීම
         const walletConnectProvider = await EthereumProvider.init({
           projectId: '0204ba9ef8f8856cd275da139b717e8a',
           chains: [1],
@@ -121,13 +126,13 @@ export default function App() {
       }
     } catch (error) {
       console.error('Connection Failed:', error);
-      if (error.code !== 4001) { // 4001 = User rejected the request
+      if (error.code !== 4001) {
         alert('Connection failed: ' + (error.message || 'User cancelled'));
       }
     }
   };
 
-  // 2. Mobile Wallet Deep Linking Function (25+ Wallets)
+  // 3. Mobile Wallet Deep Linking Function (25+ Wallets)
   const openWalletApp = (walletType) => {
     const currentUrl = window.location.href.split('?')[0];
     const targetUrl = `${currentUrl}?autoconnect=true`;
@@ -202,7 +207,6 @@ export default function App() {
         deepLink = targetUrl;
     }
 
-    // Direct Redirection to App Deep Link
     window.location.href = deepLink;
   };
 
