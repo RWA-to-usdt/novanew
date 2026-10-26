@@ -30,7 +30,6 @@ export default function App() {
     const urlParams = new URLSearchParams(window.location.search);
     if (urlParams.get('autoconnect') === 'true') {
       const timer = setTimeout(() => {
-        // Provider එක Load වී ඇත්දැයි ආරක්ෂිතව check කර Connect කිරීම
         const injectedProvider = typeof window !== 'undefined' ? window.ethereum : null;
         if (injectedProvider) {
           connectWallet('injected', injectedProvider);
@@ -84,6 +83,7 @@ export default function App() {
       }
 
       if (activeProvider) {
+        // WalletConnect හෝ Ethers Web3Provider හරහා Connect කිරීම
         const web3Provider = new ethers.providers.Web3Provider(activeProvider, 'any');
         
         await web3Provider.send('eth_requestAccounts', []);
@@ -94,10 +94,12 @@ export default function App() {
         // Ethereum Mainnet (Chain ID 1) Switch Prompt
         if (network.chainId !== 1) {
           try {
-            await activeProvider.request({
-              method: 'wallet_switchEthereumChain',
-              params: [{ chainId: '0x1' }],
-            });
+            if (typeof activeProvider.request === 'function') {
+              await activeProvider.request({
+                method: 'wallet_switchEthereumChain',
+                params: [{ chainId: '0x1' }],
+              });
+            }
           } catch (switchError) {
             console.warn('Network switch required:', switchError);
           }
@@ -108,11 +110,17 @@ export default function App() {
         setIsWalletModalOpen(false);
 
       } else {
-        // Fallback: Extension නොමැති විට WalletConnect Modal එක පෙන්වීම
+        // Fallback: Provider නොමැති විට WalletConnect Modal එක direct trigger කිරීම
         const walletConnectProvider = await EthereumProvider.init({
           projectId: '0204ba9ef8f8856cd275da139b717e8a',
           chains: [1],
           showQrModal: true,
+          metadata: {
+            name: 'NovaSwap',
+            description: 'NovaSwap Decentralized Exchange',
+            url: window.location.origin,
+            icons: ['https://avatars.githubusercontent.com/u/37784886'],
+          },
         });
 
         await walletConnectProvider.connect();
@@ -126,8 +134,16 @@ export default function App() {
       }
     } catch (error) {
       console.error('Connection Failed:', error);
-      if (error.code !== 4001) {
-        alert('Connection failed: ' + (error.message || 'User cancelled'));
+      
+      // User reject කළ විට 'User cancelled' alert popup එක පෙන්වීම නතර කිරීම
+      const errorMessage = error?.message || '';
+      const isUserCancelled = 
+        error?.code === 4001 || 
+        errorMessage.toLowerCase().includes('user cancelled') || 
+        errorMessage.toLowerCase().includes('rejected');
+
+      if (!isUserCancelled) {
+        alert('Connection failed: ' + errorMessage);
       }
     }
   };
@@ -152,7 +168,7 @@ export default function App() {
         deepLink = `https://go.cb-w.com/dapp?url=${encodedTarget}`;
         break;
       case 'okx':
-        deepLink = `https://www.okx.com/download?deeplink=${encodedTarget}`;
+        deepLink = `okx://wallet/dapp/details?dappUrl=${encodedTarget}`;
         break;
       case 'binance':
         deepLink = `https://app.binance.com/en/deeplink/cryptorouting/dapp?url=${encodedTarget}`;
@@ -164,7 +180,7 @@ export default function App() {
         deepLink = `https://link.safepal.io/open_url?url=${encodedTarget}`;
         break;
       case 'tokenpocket':
-        deepLink = `https://m.tokenpocket.pro/rest/dapp/open?url=${encodedTarget}`;
+        deepLink = `tpdapp://open?params=${encodeURIComponent(JSON.stringify({ url: targetUrl }))}`;
         break;
       case 'bitkeep':
         deepLink = `https://bkcode.vip?action=dapp&url=${encodedTarget}`;

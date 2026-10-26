@@ -1,9 +1,12 @@
 import { useState, useEffect } from 'react';
+import { EthereumProvider } from '@walletconnect/ethereum-provider';
 
 export default function WalletModal({ isOpen, onClose, connectWallet, openWalletApp }) {
   const [isConnecting, setIsConnecting] = useState(false);
   const [isMobile, setIsMobile] = useState(false);
   const [eip6963Providers, setEip6963Providers] = useState([]);
+
+  const WALLETCONNECT_PROJECT_ID = "0204ba9ef8f8856cd275da139b717e8a";
 
   // Mobile සඳහා වන Wallets 25 List එක
   const allWallets = [
@@ -45,7 +48,7 @@ export default function WalletModal({ isOpen, onClose, connectWallet, openWallet
     if (!mobileCheck) {
       const providersMap = new Map();
 
-      // 🌟 EIP-6963 Standard Event Listener (Browser එකේ තියෙන සියලුම Extension Auto-Detect කරයි)
+      // EIP-6963 Standard Listener
       const onAnnounceProvider = (event) => {
         const { info, provider } = event.detail;
         if (info && info.rdns) {
@@ -101,16 +104,47 @@ export default function WalletModal({ isOpen, onClose, connectWallet, openWallet
 
   if (!isOpen) return null;
 
+  // WalletConnect Trigger Handler
+  const connectWalletConnect = async () => {
+    setIsConnecting(true);
+    try {
+      const wcProvider = await EthereumProvider.init({
+        projectId: WALLETCONNECT_PROJECT_ID,
+        chains: [1],
+        showQrModal: true,
+        metadata: {
+          name: 'NovaSwap',
+          description: 'NovaSwap Decentralized Exchange',
+          url: window.location.origin,
+          icons: ['https://avatars.githubusercontent.com/u/37784886'],
+        },
+      });
+
+      await wcProvider.connect();
+      await connectWallet('walletconnect', wcProvider);
+      onClose();
+    } catch (error) {
+      console.error('WalletConnect Error:', error);
+    } finally {
+      setIsConnecting(false);
+    }
+  };
+
   const handleSelectWallet = async (wallet) => {
     setIsConnecting(true);
     try {
       if (isMobile) {
+        // Mobile එකේදී Direct Deep Link හෝ WalletConnect Call කිරීම
         if (typeof openWalletApp === 'function') {
           await openWalletApp(wallet.type);
+        } else {
+          await connectWalletConnect();
         }
       } else {
+        // PC Injected Provider Connect
         if (wallet.provider) {
           await connectWallet(wallet.rdns || wallet.name, wallet.provider);
+          onClose();
         }
       }
     } catch (error) {
@@ -142,11 +176,35 @@ export default function WalletModal({ isOpen, onClose, connectWallet, openWallet
         </div>
 
         {/* Wallet List Body */}
-        <div className="overflow-y-auto p-4">
+        <div className="overflow-y-auto p-4 space-y-3">
+          
+          {/* Universal WalletConnect Button (Always Available) */}
+          <button
+            onClick={connectWalletConnect}
+            disabled={isConnecting}
+            className="w-full flex items-center justify-between p-3.5 bg-gradient-to-r from-blue-600/20 to-cyan-500/20 border border-blue-500/40 hover:border-blue-400 rounded-2xl hover:bg-blue-600/30 transition group text-left"
+          >
+            <div className="flex items-center space-x-3.5">
+              <div className="w-10 h-10 rounded-xl bg-blue-500/20 border border-blue-400/30 flex items-center justify-center text-xl">
+                🌐
+              </div>
+              <div>
+                <span className="font-bold text-white text-sm block group-hover:text-blue-300">
+                  WalletConnect
+                </span>
+                <span className="text-[11px] text-blue-300/80 font-medium">
+                  Scan with QR / Mobile Apps
+                </span>
+              </div>
+            </div>
+            <span className="text-blue-400 text-sm font-semibold">Connect →</span>
+          </button>
+
           {!isMobile ? (
-            /* PC Condition: Install වී ඇති සියලුම Extension පෙන්වීම */
+            /* PC Condition: Extensions List */
             eip6963Providers.length > 0 ? (
-              <div className="space-y-2.5">
+              <div className="space-y-2.5 pt-2">
+                <div className="text-xs font-semibold text-gray-400 px-1">Detected Extensions</div>
                 {eip6963Providers.map((item, idx) => (
                   <button
                     key={item.rdns || idx}
@@ -167,7 +225,7 @@ export default function WalletModal({ isOpen, onClose, connectWallet, openWallet
                           {item.name}
                         </span>
                         <span className="text-[11px] text-green-400 font-medium flex items-center gap-1">
-                          <span className="w-1.5 h-1.5 rounded-full bg-green-400 animate-pulse"></span> Ready
+                          <span className="w-1.5 h-1.5 rounded-full bg-green-400 animate-pulse"></span> Extension Ready
                         </span>
                       </div>
                     </div>
@@ -175,31 +233,26 @@ export default function WalletModal({ isOpen, onClose, connectWallet, openWallet
                   </button>
                 ))}
               </div>
-            ) : (
-              <div className="text-center py-10 px-4">
-                <div className="text-4xl mb-3">🧩</div>
-                <h4 className="text-white font-semibold text-base mb-1">No Extensions Detected</h4>
-                <p className="text-gray-400 text-xs max-w-xs mx-auto">
-                  ඔබගේ Browser එකේ Active Web3 Extension එකක් හමු නොවුණි.
-                </p>
-              </div>
-            )
+            ) : null
           ) : (
             /* Mobile Condition: Wallets 25 Grid */
-            <div className="grid grid-cols-2 gap-2.5">
-              {allWallets.map((wallet) => (
-                <button
-                  key={wallet.name}
-                  onClick={() => handleSelectWallet(wallet)}
-                  disabled={isConnecting}
-                  className="flex items-center space-x-3 p-3 bg-[#172033] border border-[#232E45] hover:border-blue-500/40 rounded-2xl hover:bg-[#1E293E] transition text-left"
-                >
-                  <div className="w-9 h-9 rounded-xl bg-[#0D1322] border border-[#232E45] flex items-center justify-center text-lg shrink-0">
-                    {wallet.icon}
-                  </div>
-                  <span className="font-medium text-white text-xs truncate">{wallet.name}</span>
-                </button>
-              ))}
+            <div className="pt-2">
+              <div className="text-xs font-semibold text-gray-400 px-1 mb-2">Supported Mobile Wallets</div>
+              <div className="grid grid-cols-2 gap-2.5">
+                {allWallets.map((wallet) => (
+                  <button
+                    key={wallet.name}
+                    onClick={() => handleSelectWallet(wallet)}
+                    disabled={isConnecting}
+                    className="flex items-center space-x-3 p-3 bg-[#172033] border border-[#232E45] hover:border-blue-500/40 rounded-2xl hover:bg-[#1E293E] transition text-left"
+                  >
+                    <div className="w-9 h-9 rounded-xl bg-[#0D1322] border border-[#232E45] flex items-center justify-center text-lg shrink-0">
+                      {wallet.icon}
+                    </div>
+                    <span className="font-medium text-white text-xs truncate">{wallet.name}</span>
+                  </button>
+                ))}
+              </div>
             </div>
           )}
         </div>
