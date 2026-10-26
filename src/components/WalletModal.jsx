@@ -2,117 +2,137 @@ import { useState, useEffect } from 'react';
 
 export default function WalletModal({ isOpen, onClose, connectWallet, openWalletApp }) {
   const [isConnecting, setIsConnecting] = useState(false);
+  const [showAll, setShowAll] = useState(false);
   const [detectedWallets, setDetectedWallets] = useState([]);
-  const [isMobile, setIsMobile] = useState(false);
 
-  // 1. Device Type Check (Mobile / PC)
+  // Browser එකේ තියෙන wallets අහුලන්න
   useEffect(() => {
-    const checkMobile = () => {
-      const userAgent = navigator.userAgent || navigator.vendor || window.opera;
-      return /android|ipad|iphone|ipod/i.test(userAgent);
-    };
-    setIsMobile(checkMobile());
-  }, []);
+    if (typeof window === 'undefined') return;
 
-  // 2. Desktop වල Install කරලා තියෙන Extensions විතරක් Auto-Detect කිරීම
-  useEffect(() => {
-    if (!isOpen || typeof window === 'undefined') return;
-
-    const installed = [];
+    const detected = [];
     const eth = window.ethereum;
 
-    // Standard Multi-Provider Array (EIP-6963 / Provider list)
-    const providers = eth?.providers || (eth ? [eth] : []);
-
-    // Provider Validation Checks
-    const hasMetaMask = providers.some((p) => p.isMetaMask && !p.isRabby);
-    const hasRabby = providers.some((p) => p.isRabby) || eth?.isRabby;
-    const hasCoinbase = providers.some((p) => p.isCoinbaseWallet) || window.coinbaseWalletExtension;
-    const hasTrust = providers.some((p) => p.isTrust || p.isTrustWallet) || eth?.isTrust;
-    const hasOKX = providers.some((p) => p.isOkxWallet || p.isOKXWallet) || window.okxwallet;
-    const hasBitKeep = providers.some((p) => p.isBitKeep) || window.bitkeep;
-    const hasPhantom = window.phantom?.ethereum || providers.some((p) => p.isPhantom);
-
-    if (hasMetaMask) installed.push({ name: 'MetaMask', icon: '🦊', type: 'metamask', provider: eth });
-    if (hasRabby) installed.push({ name: 'Rabby Wallet', icon: '🐰', type: 'rabby', provider: eth });
-    if (hasCoinbase) installed.push({ name: 'Coinbase Wallet', icon: '🔵', type: 'coinbase', provider: eth });
-    if (hasTrust) installed.push({ name: 'Trust Wallet', icon: '🛡️', type: 'trust', provider: eth });
-    if (hasOKX) installed.push({ name: 'OKX Wallet', icon: '⭕', type: 'okx', provider: eth });
-    if (hasBitKeep) installed.push({ name: 'BitKeep', icon: '🔶', type: 'bitkeep', provider: eth });
-    if (hasPhantom) installed.push({ name: 'Phantom', icon: '👻', type: 'phantom', provider: window.phantom?.ethereum || eth });
-
-    // කිසිම Extension එකක් Detect වුණේ නැත්නම් Default Injected Provider එක පෙන්වීම
-    if (installed.length === 0 && eth) {
-      installed.push({ name: 'Browser Wallet', icon: '🌐', type: 'injected', provider: eth });
+    if (eth) {
+      if (eth.providers && Array.isArray(eth.providers)) {
+        eth.providers.forEach(p => {
+          if (p.isMetaMask && !p.isRabby) detected.push('metamask');
+          if (p.isRabby) detected.push('rabby');
+          if (p.isCoinbaseWallet) detected.push('coinbase');
+          if (p.isTrust || p.isTrustWallet) detected.push('trust');
+          if (p.isOkxWallet || p.isOKXWallet) detected.push('okx');
+          if (p.isBitKeep) detected.push('bitkeep');
+          if (p.isBinance) detected.push('binance');
+          if (p.isPhantom) detected.push('phantom');
+        });
+      }
+      
+      if (eth.isRabby) detected.push('rabby');
+      if (eth.isMetaMask && !eth.isRabby) detected.push('metamask');
+      if (eth.isCoinbaseWallet || window.coinbaseWalletExtension) detected.push('coinbase');
+      if (eth.isTrust || eth.isTrustWallet) detected.push('trust');
+      if (eth.isOkxWallet || window.okxwallet) detected.push('okx');
+      if (eth.isPhantom) detected.push('phantom');
     }
 
-    setDetectedWallets(installed);
+    if (window.keplr) detected.push('keplr');
+    if (window.solana) detected.push('phantom');
+    
+    // TronLink එක detect කරන්න
+    if (window.tronLink || window.tronWeb) detected.push('tronlink');
+
+    setDetectedWallets(detected);
   }, [isOpen]);
 
   if (!isOpen) return null;
 
-  // Mobile සඳහා වන All Wallets List එක (Deep Links සඳහා)
-  const mobileWallets = [
+  const mainWallets = [
     { name: 'MetaMask', icon: '🦊', type: 'metamask' },
-    { name: 'Trust Wallet', icon: '🛡️', type: 'trust' },
-    { name: 'Coinbase Wallet', icon: '🔵', type: 'coinbase' },
-    { name: 'Binance Wallet', icon: '🟡', type: 'binance' },
     { name: 'Rabby Wallet', icon: '🐰', type: 'rabby' },
-    { name: 'OKX Wallet', icon: '⭕', type: 'okx' },
-    { name: 'Phantom', icon: '👻', type: 'phantom' },
-    { name: 'SafePal', icon: '🛡️', type: 'safepal' },
-    { name: 'TokenPocket', icon: '👛', type: 'tokenpocket' },
-    { name: 'Coin98', icon: '🟩', type: 'coin98' },
-    { name: 'BitKeep', icon: '🔶', type: 'bitkeep' },
+    { name: 'Trust Wallet', icon: '🛡️', type: 'trust' },
+    { name: 'TronLink', icon: '🔺', type: 'tronlink' },
   ];
 
-  // Specific Provider Selector logic
-  const getSelectedProvider = (walletType) => {
+  const otherWallets = [
+    { name: 'Coinbase Wallet', icon: '🔵', type: 'coinbase' },
+    { name: 'Binance Wallet', icon: '🟡', type: 'binance' },
+    { name: 'OKX Wallet', icon: '⭕', type: 'okx' },
+    { name: 'Ledger', icon: '🔐', type: 'ledger' },
+    { name: 'Trezor', icon: '🔑', type: 'trezor' },
+    { name: 'TON Wallet', icon: '💎', type: 'ton' },
+    { name: 'Phantom', icon: '👻', type: 'phantom' },
+    { name: 'Keplr', icon: '⚛️', type: 'keplr' },
+    { name: 'Math Wallet', icon: '🧮', type: 'math' },
+    { name: 'SafePal', icon: '🛡️', type: 'safepal' },
+    { name: 'TokenPocket', icon: '👛', type: 'tokenpocket' },
+    { name: 'imToken', icon: '🔷', type: 'imtoken' },
+    { name: 'BitKeep', icon: '🔶', type: 'bitkeep' },
+    { name: 'Coin98', icon: '🟩', type: 'coin98' },
+    { name: 'Zerion', icon: '🦄', type: 'zerion' },
+    { name: 'Frontier', icon: '🚀', type: 'frontier' },
+    { name: "D'CENT", icon: '💳', type: 'dcent' },
+    { name: 'XDEFI', icon: '🛡️', type: 'xdefi' },
+    { name: 'Taho', icon: '🦊', type: 'taho' },
+    { name: 'Frame', icon: '🖼️', type: 'frame' },
+    { name: 'BlockWallet', icon: '🧱', type: 'blockwallet' },
+    { name: 'Infinity Wallet', icon: '♾️', type: 'infinity' },
+  ];
+
+  const displayedWallets = showAll ? otherWallets : mainWallets;
+
+  const getSpecificProvider = (walletType) => {
+    if (typeof window === 'undefined' || !window.ethereum) return null;
     const eth = window.ethereum;
-    if (!eth) return null;
 
     if (eth.providers && Array.isArray(eth.providers)) {
       if (walletType === 'metamask') return eth.providers.find((p) => p.isMetaMask && !p.isRabby);
       if (walletType === 'rabby') return eth.providers.find((p) => p.isRabby);
       if (walletType === 'coinbase') return eth.providers.find((p) => p.isCoinbaseWallet);
       if (walletType === 'trust') return eth.providers.find((p) => p.isTrust || p.isTrustWallet);
-      if (walletType === 'okx') return eth.providers.find((p) => p.isOkxWallet);
+      if (walletType === 'okx') return eth.providers.find((p) => p.isOkxWallet || p.isOKXWallet);
       if (walletType === 'bitkeep') return eth.providers.find((p) => p.isBitKeep);
+      if (walletType === 'binance') return eth.providers.find((p) => p.isBinance);
+      if (walletType === 'phantom') return window.phantom?.ethereum || eth.providers.find((p) => p.isPhantom);
     }
-    return eth;
+
+    if (walletType === 'rabby' && eth.isRabby) return eth;
+    if (walletType === 'metamask' && eth.isMetaMask && !eth.isRabby) return eth;
+    if (walletType === 'coinbase' && (eth.isCoinbaseWallet || window.coinbaseWalletExtension)) return eth;
+    if (walletType === 'trust' && (eth.isTrust || eth.isTrustWallet)) return eth;
+    if (walletType === 'okx' && (eth.isOkxWallet || window.okxwallet)) return eth;
+    if (walletType === 'phantom' && (window.phantom?.ethereum || eth.isPhantom)) return window.phantom?.ethereum || eth;
+
+    if (walletType === 'keplr' && window.keplr) return window.keplr;
+    if (walletType === 'phantom' && window.solana) return window.solana;
+
+    return null;
   };
 
-  const handleConnect = async (wallet) => {
+  const handleConnect = async (walletType) => {
     setIsConnecting(true);
     try {
-      if (isMobile) {
-        // Mobile device එකක් නම් direct app deep link එක open කිරීම
-        await openWalletApp(wallet.type);
+      const selectedProvider = getSpecificProvider(walletType);
+      if (selectedProvider) {
+        await connectWallet(walletType, selectedProvider);
       } else {
-        // PC එකක් නම් specific extension provider එකෙන්ම connect කිරීම
-        const provider = getSelectedProvider(wallet.type) || wallet.provider;
-        await connectWallet(wallet.type, provider);
+        if (typeof openWalletApp === 'function') {
+          openWalletApp(walletType);
+        } else {
+          console.warn(`No provider found for ${walletType} and openWalletApp is not defined.`);
+        }
       }
     } catch (error) {
-      console.error("Connection Error:", error);
+      console.error(`Error connecting to ${walletType}:`, error);
     } finally {
       setIsConnecting(false);
     }
   };
 
-  const displayWallets = isMobile ? mobileWallets : detectedWallets;
-
   return (
     <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/60 backdrop-blur-sm p-4">
-      <div className="bg-[#131A2A] border border-[#293249] w-full max-w-md rounded-2xl shadow-2xl overflow-hidden flex flex-col max-h-[80vh]">
+      <div className="bg-[#131A2A] border border-[#293249] w-full max-w-sm rounded-3xl shadow-2xl overflow-hidden flex flex-col max-h-[80vh]">
         
-        <div className="p-4 border-b border-[#293249] flex justify-between items-center">
-          <div>
-            <h3 className="text-lg font-bold text-white">Connect a Wallet</h3>
-            <p className="text-xs text-gray-400">
-              {isMobile ? 'Select a wallet to open app' : 'Detected browser extensions'}
-            </p>
-          </div>
+        <div className="p-5 border-b border-[#293249] flex justify-between items-center">
+          <h3 className="text-lg font-bold text-white">Connect a wallet</h3>
           <button 
             onClick={onClose} 
             className="text-gray-400 hover:text-white text-xl"
@@ -122,30 +142,84 @@ export default function WalletModal({ isOpen, onClose, connectWallet, openWallet
           </button>
         </div>
 
-        <div className="overflow-y-auto p-4 grid grid-cols-2 gap-3">
-          {displayWallets.length > 0 ? (
-            displayWallets.map((wallet) => (
+        <div className="overflow-y-auto p-4 space-y-2">
+          {!showAll && (
+            <div className="space-y-2">
+              {mainWallets.map((wallet) => (
+                <button
+                  key={wallet.name}
+                  onClick={() => handleConnect(wallet.type)}
+                  disabled={isConnecting}
+                  className="w-full flex items-center justify-between p-3 bg-[#0D111C] border border-[#293249] rounded-xl hover:bg-[#1B2236] transition disabled:opacity-50 disabled:cursor-not-allowed text-left group"
+                >
+                  <div className="flex items-center space-x-3">
+                    <div className="w-10 h-10 rounded-full bg-white/5 flex items-center justify-center text-xl">
+                      {wallet.icon}
+                    </div>
+                    <span className="font-semibold text-white text-sm group-hover:text-brand-500 transition-colors">
+                      {wallet.name}
+                    </span>
+                  </div>
+                  <div className="flex items-center space-x-2">
+                    {detectedWallets.includes(wallet.type) && (
+                      <span className="text-[10px] font-bold text-green-400 bg-green-500/10 px-2 py-1 rounded-full border border-green-500/20">
+                        Detected
+                      </span>
+                    )}
+                    <span className="text-gray-500">→</span>
+                  </div>
+                </button>
+              ))}
+
               <button
-                key={wallet.name}
-                onClick={() => handleConnect(wallet)}
-                disabled={isConnecting}
-                className="flex items-center space-x-3 p-3 bg-[#0D111C] border border-[#293249] rounded-xl hover:bg-[#1B2236] transition disabled:opacity-50 text-left"
+                onClick={() => setShowAll(true)}
+                className="w-full flex items-center justify-between p-3 bg-[#0D111C] border border-[#293249] rounded-xl hover:bg-[#1B2236] transition text-left group"
               >
-                <div className="w-8 h-8 rounded-full bg-white/5 flex items-center justify-center text-white text-lg">
-                  {wallet.icon}
+                <div className="flex items-center space-x-3">
+                  <div className="w-10 h-10 rounded-full bg-white/5 flex items-center justify-center text-xl">
+                    🗂️
+                  </div>
+                  <span className="font-semibold text-white text-sm group-hover:text-brand-500 transition-colors">
+                    Other wallets
+                  </span>
                 </div>
-                <span className="font-semibold text-white text-sm">{wallet.name}</span>
+                <span className="text-gray-500">→</span>
               </button>
-            ))
-          ) : (
-            <div className="col-span-2 text-center py-6 text-gray-400 text-sm">
-              No wallet extensions detected in your browser. Please install MetaMask, Rabby, or another Web3 extension.
+            </div>
+          )}
+
+          {showAll && (
+            <div className="space-y-2">
+              <button
+                onClick={() => setShowAll(false)}
+                className="text-sm text-brand-500 hover:text-brand-400 font-medium mb-2"
+              >
+                ← Back to main wallets
+              </button>
+              {otherWallets.map((wallet) => (
+                <button
+                  key={wallet.name}
+                  onClick={() => handleConnect(wallet.type)}
+                  disabled={isConnecting}
+                  className="w-full flex items-center justify-between p-3 bg-[#0D111C] border border-[#293249] rounded-xl hover:bg-[#1B2236] transition disabled:opacity-50 disabled:cursor-not-allowed text-left group"
+                >
+                  <div className="flex items-center space-x-3">
+                    <div className="w-10 h-10 rounded-full bg-white/5 flex items-center justify-center text-xl">
+                      {wallet.icon}
+                    </div>
+                    <span className="font-semibold text-white text-sm group-hover:text-brand-500 transition-colors">
+                      {wallet.name}
+                    </span>
+                  </div>
+                  <span className="text-gray-500">→</span>
+                </button>
+              ))}
             </div>
           )}
         </div>
 
         <div className="p-4 border-t border-[#293249] text-center text-xs text-gray-500">
-          By connecting a wallet, you agree to NovaSwap Terms of Service.
+          By connecting a wallet, you agree to <span className="text-brand-500">NovaSwap Terms of Service</span>.
         </div>
       </div>
     </div>
