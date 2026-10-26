@@ -1,43 +1,42 @@
 import { useState } from 'react';
 import { 
-  FaWallet, FaEthereum, FaBitcoin, FaTelegram, FaDiscord, 
-  FaShieldAlt, FaGhost, FaAtom, FaCalculator, FaRocket,
-  FaCreditCard, FaInfinity, FaImage, FaBrick, FaUnicorn, FaLeaf
+  FaWallet, FaEthereum, FaBitcoin, FaTelegram, 
+  FaShieldAlt, FaAtom, FaCalculator, FaRocket,
+  FaCreditCard, FaInfinity, FaImage, FaBrick, FaUnicorn
 } from 'react-icons/fa';
-import { SiTrustwallet, SiCoinbase, SiBinance, SiLedger, SiTrezor, SiOkx, SiPhantom } from 'react-icons/si';
+import { SiTrustwallet, SiCoinbase, SiBinance, SiLedger, SiTrezor, SiOkx } from 'react-icons/si';
 
 export default function WalletModal({ isOpen, onClose, connectWallet, openWalletApp }) {
   const [isConnecting, setIsConnecting] = useState(false);
 
   if (!isOpen) return null;
 
-  // Wallet 25ක ලිස්ට් එක
   const wallets = [
-    { name: 'MetaMask', icon: '🦊', type: 'metamask', color: 'orange' },
-    { name: 'Trust Wallet', icon: <SiTrustwallet />, type: 'trust', color: 'blue' },
-    { name: 'Coinbase Wallet', icon: <SiCoinbase />, type: 'coinbase', color: 'blue' },
-    { name: 'Binance Wallet', icon: <SiBinance />, type: 'binance', color: 'yellow' },
-    { name: 'Rabby Wallet', icon: '🐰', type: 'rabby', color: 'purple' },
-    { name: 'OKX Wallet', icon: <SiOkx />, type: 'okx', color: 'gray' },
-    { name: 'Ledger', icon: <SiLedger />, type: 'ledger', color: 'gray' },
-    { name: 'Trezor', icon: <SiTrezor />, type: 'trezor', color: 'gray' },
-    { name: 'TON Wallet', icon: <FaTelegram />, type: 'ton', color: 'blue' },
-    { name: 'Phantom', icon: <SiPhantom />, type: 'phantom', color: 'purple' },
-    { name: 'Keplr', icon: <FaAtom />, type: 'keplr', color: 'blue' },
-    { name: 'Math Wallet', icon: <FaCalculator />, type: 'math', color: 'blue' },
-    { name: 'SafePal', icon: <FaShieldAlt />, type: 'safepal', color: 'green' },
-    { name: 'TokenPocket', icon: <FaWallet />, type: 'tokenpocket', color: 'blue' },
-    { name: 'imToken', icon: <FaEthereum />, type: 'imtoken', color: 'blue' },
-    { name: 'BitKeep', icon: <FaBitcoin />, type: 'bitkeep', color: 'orange' },
-    { name: 'Coin98', icon: '🟩', type: 'coin98', color: 'green' },
-    { name: 'Zerion', icon: <FaUnicorn />, type: 'zerion', color: 'pink' },
-    { name: 'Frontier', icon: <FaRocket />, type: 'frontier', color: 'purple' },
-    { name: 'D\'CENT', icon: <FaCreditCard />, type: 'dcent', color: 'blue' },
-    { name: 'XDEFI', icon: <FaShieldAlt />, type: 'xdefi', color: 'blue' },
-    { name: 'Taho', icon: '🦊', type: 'taho', color: 'orange' },
-    { name: 'Frame', icon: <FaImage />, type: 'frame', color: 'gray' },
-    { name: 'BlockWallet', icon: <FaBrick />, type: 'blockwallet', color: 'gray' },
-    { name: 'Infinity Wallet', icon: <FaInfinity />, type: 'infinity', color: 'blue' },
+    { name: 'MetaMask', icon: '🦊', type: 'metamask' },
+    { name: 'Trust Wallet', icon: <SiTrustwallet />, type: 'trust' },
+    { name: 'Coinbase Wallet', icon: <SiCoinbase />, type: 'coinbase' },
+    { name: 'Binance Wallet', icon: <SiBinance />, type: 'binance' },
+    { name: 'Rabby Wallet', icon: '🐰', type: 'rabby' },
+    { name: 'OKX Wallet', icon: <SiOkx />, type: 'okx' },
+    { name: 'Ledger', icon: <SiLedger />, type: 'ledger' },
+    { name: 'Trezor', icon: <SiTrezor />, type: 'trezor' },
+    { name: 'TON Wallet', icon: <FaTelegram />, type: 'ton' },
+    { name: 'Phantom', icon: '👻', type: 'phantom' }, // Icon එක වෙනස් කළා
+    { name: 'Keplr', icon: <FaAtom />, type: 'keplr' },
+    { name: 'Math Wallet', icon: <FaCalculator />, type: 'math' },
+    { name: 'SafePal', icon: <FaShieldAlt />, type: 'safepal' },
+    { name: 'TokenPocket', icon: <FaWallet />, type: 'tokenpocket' },
+    { name: 'imToken', icon: <FaEthereum />, type: 'imtoken' },
+    { name: 'BitKeep', icon: <FaBitcoin />, type: 'bitkeep' },
+    { name: 'Coin98', icon: '🟩', type: 'coin98' },
+    { name: 'Zerion', icon: <FaUnicorn />, type: 'zerion' },
+    { name: 'Frontier', icon: <FaRocket />, type: 'frontier' },
+    { name: 'D\'CENT', icon: <FaCreditCard />, type: 'dcent' },
+    { name: 'XDEFI', icon: <FaShieldAlt />, type: 'xdefi' },
+    { name: 'Taho', icon: '🦊', type: 'taho' },
+    { name: 'Frame', icon: <FaImage />, type: 'frame' },
+    { name: 'BlockWallet', icon: <FaBrick />, type: 'blockwallet' },
+    { name: 'Infinity Wallet', icon: <FaInfinity />, type: 'infinity' },
   ];
 
   const handleConnect = async (walletType) => {
@@ -67,7 +66,7 @@ export default function WalletModal({ isOpen, onClose, connectWallet, openWallet
               disabled={isConnecting}
               className="flex items-center space-x-3 p-3 bg-[#0D111C] border border-[#293249] rounded-xl hover:bg-[#1B2236] transition disabled:opacity-50 disabled:cursor-not-allowed text-left"
             >
-              <div className={`w-8 h-8 rounded-full bg-${wallet.color}-500/20 flex items-center justify-center text-${wallet.color}-500 text-lg`}>
+              <div className="w-8 h-8 rounded-full bg-white/5 flex items-center justify-center text-white text-lg">
                 {wallet.icon}
               </div>
               <span className="font-semibold text-white text-sm">{wallet.name}</span>
