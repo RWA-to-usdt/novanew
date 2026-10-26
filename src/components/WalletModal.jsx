@@ -1,6 +1,9 @@
 import { useState } from 'react';
-import { FaWallet, FaEthereum, FaBitcoin, FaTelegram, FaShieldAlt, FaAtom, FaCalculator, FaRocket, FaCreditCard, FaInfinity, FaImage, FaBrick, FaUnicorn } from 'react-icons/fa';
-import { SiTrustwallet, SiCoinbase, SiBinance, SiOkx } from 'react-icons/si';
+import { 
+  FaWallet, FaEthereum, FaBitcoin, FaTelegram, FaShieldAlt, 
+  FaAtom, FaCalculator, FaRocket, FaCreditCard, FaInfinity, 
+  FaImage, FaBrick, FaUnicorn, FaKey, FaLock 
+} from 'react-icons/fa';
 
 export default function WalletModal({ isOpen, onClose, connectWallet, openWalletApp }) {
   const [isConnecting, setIsConnecting] = useState(false);
@@ -9,13 +12,13 @@ export default function WalletModal({ isOpen, onClose, connectWallet, openWallet
 
   const wallets = [
     { name: 'MetaMask', icon: '🦊', type: 'metamask' },
-    { name: 'Trust Wallet', icon: <SiTrustwallet />, type: 'trust' },
-    { name: 'Coinbase Wallet', icon: <SiCoinbase />, type: 'coinbase' },
-    { name: 'Binance Wallet', icon: <SiBinance />, type: 'binance' },
+    { name: 'Trust Wallet', icon: <FaWallet />, type: 'trust' },
+    { name: 'Coinbase Wallet', icon: '🛡️', type: 'coinbase' },
+    { name: 'Binance Wallet', icon: '🟡', type: 'binance' },
     { name: 'Rabby Wallet', icon: '🐰', type: 'rabby' },
-    { name: 'OKX Wallet', icon: <SiOkx />, type: 'okx' },
-    { name: 'Ledger', icon: '🔐', type: 'ledger' },
-    { name: 'Trezor', icon: '🔑', type: 'trezor' },
+    { name: 'OKX Wallet', icon: '⭕', type: 'okx' },
+    { name: 'Ledger', icon: <FaLock />, type: 'ledger' },
+    { name: 'Trezor', icon: <FaKey />, type: 'trezor' },
     { name: 'TON Wallet', icon: <FaTelegram />, type: 'ton' },
     { name: 'Phantom', icon: '👻', type: 'phantom' },
     { name: 'Keplr', icon: <FaAtom />, type: 'keplr' },
