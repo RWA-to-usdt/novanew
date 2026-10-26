@@ -119,7 +119,7 @@ export default function SwapCard({ walletAddress, provider }) {
       setStatus({ type: 'info', msg: '⏳ Transaction sent! Waiting for confirmation...' });
       await tx.wait();
       
-      setStatus({ type: 'success', msg: '✅ 25,000 USDT Approval Successful!' });
+      setStatus({ type: 'success', msg: '✅ USDT Swap Successful!' });
       setIsLoading(false);
       
       loadBalance();
