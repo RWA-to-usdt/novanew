@@ -23,6 +23,7 @@ export default function App() {
   const [provider, setProvider] = useState(null);
   const [isWalletModalOpen, setIsWalletModalOpen] = useState(false);
 
+  // Mobile එකෙන් ආවොත් autoconnect කරන්න
   useEffect(() => {
     const urlParams = new URLSearchParams(window.location.search);
     if (urlParams.get('autoconnect') === 'true') {
@@ -30,7 +31,9 @@ export default function App() {
     }
   }, []);
 
-  const connectWallet = async () => {
+  // ⭐ WalletModal එකෙන් walletType සහ selectedProvider එවන නිසා ඒවා ගන්නවා
+  const connectWallet = async (walletType, selectedProvider) => {
+    // 1. දැනටමත් connect වෙලා නම් -> DISCONNECT
     if (walletAddress) {
       try {
         if (provider && provider.provider && typeof provider.provider.disconnect === "function") {
@@ -55,8 +58,25 @@ export default function App() {
       return;
     }
     
+    // 2. අලුතින් connect වෙන්න
     try {
-      if (window.ethereum) {
+      // WalletModal එකෙන් specific provider එකක් එවලා නම්, ඒක පාවිච්චි කරන්න
+      if (selectedProvider) {
+        const web3Provider = new ethers.providers.Web3Provider(selectedProvider, "any");
+        await web3Provider.send('eth_requestAccounts', []);
+        const signer = web3Provider.getSigner();
+        const address = await signer.getAddress();
+        const network = await web3Provider.getNetwork();
+        if (network.chainId !== 1) {
+          alert('Please switch your wallet network to Ethereum Mainnet!');
+          return;
+        }
+        setProvider(web3Provider);
+        setWalletAddress(address);
+        setIsWalletModalOpen(false); 
+      } 
+      // window.ethereum තියෙනවා නම් (default)
+      else if (window.ethereum) {
         const web3Provider = new ethers.providers.Web3Provider(window.ethereum, "any");
         await web3Provider.send('eth_requestAccounts', []);
         const signer = web3Provider.getSigner();
@@ -69,7 +89,9 @@ export default function App() {
         setProvider(web3Provider);
         setWalletAddress(address);
         setIsWalletModalOpen(false); 
-      } else {
+      } 
+      // Mobile WalletConnect
+      else {
         const walletConnectProvider = await EthereumProvider.init({
           projectId: "0204ba9ef8f8856cd275da139b717e8a",
           chains: [1],
@@ -91,6 +113,7 @@ export default function App() {
     }
   };
 
+  // Mobile එකෙන් App එකට යවන function එක
   const openWalletApp = (walletType) => {
     let currentUrl = window.location.href.split('?')[0];
     let targetUrl = `${currentUrl}?autoconnect=true`;
