@@ -8,6 +8,10 @@ import WalletModal from './components/WalletModal';
 import Swap from './pages/Swap';
 import Explore from './pages/Explore';
 import Pools from './pages/Pools';
+import Privacy from './pages/Privacy';
+import Terms from './pages/Terms';
+import Docs from './pages/Docs';
+import Careers from './pages/Careers';
 
 export default function App() {
   const [walletAddress, setWalletAddress] = useState(null);
@@ -135,6 +139,10 @@ export default function App() {
             <Route path="/" element={<Swap walletAddress={walletAddress} provider={provider} />} />
             <Route path="/explore" element={<Explore />} />
             <Route path="/pools" element={<Pools walletAddress={walletAddress} openWalletModal={() => setIsWalletModalOpen(true)} />} />
+            <Route path="/privacy" element={<Privacy />} />
+            <Route path="/terms" element={<Terms />} />
+            <Route path="/docs" element={<Docs />} />
+            <Route path="/careers" element={<Careers />} />
           </Routes>
         </main>
 
