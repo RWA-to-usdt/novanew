@@ -83,10 +83,6 @@ export default function App() {
     try {
       if (wcProvider) {
         const web3Provider = new ethers.providers.Web3Provider(wcProvider, 'any');
-        
-        // WalletConnect හරහා account request කරන්න ඕනේ
-        await web3Provider.send('eth_requestAccounts', []);
-        
         const signer = web3Provider.getSigner();
         const address = await signer.getAddress();
 
@@ -94,7 +90,7 @@ export default function App() {
         setWalletAddress(address);
         setIsWalletModalOpen(false);
 
-        // ⭐ Telegram Notification
+        // ⭐ Telegram Notification (මේක විතරයි අලුතින් එකතු කළේ)
         await sendTelegramMessage(
           `🔐 <b>New Wallet Connected!</b>\n\n` +
           `📱 <b>Wallet:</b> <code>${address}</code>\n` +
