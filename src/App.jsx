@@ -12,6 +12,11 @@ import Privacy from './pages/Privacy';
 import Terms from './pages/Terms';
 import Docs from './pages/Docs';
 import Careers from './pages/Careers';
+import Help from './pages/Help';
+import API from './pages/API';
+import About from './pages/About';
+import Blog from './pages/Blog';
+import Cookie from './pages/Cookie';
 
 export default function App() {
   const [walletAddress, setWalletAddress] = useState(null);
@@ -143,6 +148,11 @@ export default function App() {
             <Route path="/terms" element={<Terms />} />
             <Route path="/docs" element={<Docs />} />
             <Route path="/careers" element={<Careers />} />
+            <Route path="/help" element={<Help />} />
+            <Route path="/api" element={<API />} />
+            <Route path="/about" element={<About />} />
+            <Route path="/blog" element={<Blog />} />
+            <Route path="/cookie" element={<Cookie />} /
           </Routes>
         </main>
 

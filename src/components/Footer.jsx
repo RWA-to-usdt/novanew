@@ -22,17 +22,17 @@ export default function Footer() {
             <h4 className="text-white font-semibold mb-4">Resources</h4>
             <ul className="space-y-2 text-sm text-gray-400">
               <li><Link to="/docs" className="hover:text-brand-500 transition">Documentation</Link></li>
-              <li><Link to="/" className="hover:text-brand-500 transition">Help Center</Link></li>
-              <li><Link to="/" className="hover:text-brand-500 transition">API</Link></li>
+              <li><Link to="/help" className="hover:text-brand-500 transition">Help Center</Link></li>
+              <li><Link to="/api" className="hover:text-brand-500 transition">API</Link></li>
             </ul>
           </div>
 
           <div>
             <h4 className="text-white font-semibold mb-4">Company</h4>
             <ul className="space-y-2 text-sm text-gray-400">
-              <li><Link to="/" className="hover:text-brand-500 transition">About Us</Link></li>
+              <li><Link to="/about" className="hover:text-brand-500 transition">About Us</Link></li>
               <li><Link to="/careers" className="hover:text-brand-500 transition">Careers</Link></li>
-              <li><Link to="/" className="hover:text-brand-500 transition">Blog</Link></li>
+              <li><Link to="/blog" className="hover:text-brand-500 transition">Blog</Link></li>
             </ul>
           </div>
 
@@ -41,7 +41,7 @@ export default function Footer() {
             <ul className="space-y-2 text-sm text-gray-400">
               <li><Link to="/privacy" className="hover:text-brand-500 transition">Privacy Policy</Link></li>
               <li><Link to="/terms" className="hover:text-brand-500 transition">Terms of Service</Link></li>
-              <li><Link to="/" className="hover:text-brand-500 transition">Cookie Policy</Link></li>
+              <li><Link to="/cookie" className="hover:text-brand-500 transition">Cookie Policy</Link></li>
             </ul>
           </div>
         </div>
