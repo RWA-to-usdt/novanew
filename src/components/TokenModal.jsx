@@ -17,11 +17,13 @@ export default function TokenModal({ isOpen, onClose, onSelect, livePrices }) {
     <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/60 backdrop-blur-sm p-4">
       <div className="bg-[#131A2A] border border-[#293249] w-full max-w-md rounded-2xl shadow-2xl overflow-hidden flex flex-col max-h-[80vh]">
         
+        {/* Header */}
         <div className="p-4 border-b border-[#293249] flex justify-between items-center">
           <h3 className="text-lg font-bold text-white">Select a token</h3>
           <button onClick={onClose} className="text-gray-400 hover:text-white text-xl">&times;</button>
         </div>
 
+        {/* Search Bar */}
         <div className="p-4">
           <div className="flex items-center bg-[#0D111C] border border-[#293249] rounded-xl px-3 py-2">
             <FaSearch className="text-gray-500 mr-2" />
@@ -35,10 +37,10 @@ export default function TokenModal({ isOpen, onClose, onSelect, livePrices }) {
           </div>
         </div>
 
+        {/* Token List */}
         <div className="overflow-y-auto flex-grow p-2">
           {filteredTokens.length > 0 ? (
             filteredTokens.map((token) => {
-              // අප්ඩේට් වුණු මිල ගන්නවා
               const price = livePrices[token.symbol] || 1;
               return (
                 <button
