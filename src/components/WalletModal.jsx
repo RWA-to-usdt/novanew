@@ -1,10 +1,6 @@
 import { useState } from 'react';
-import { 
-  FaWallet, FaEthereum, FaBitcoin, FaTelegram, 
-  FaShieldAlt, FaAtom, FaCalculator, FaRocket,
-  FaCreditCard, FaInfinity, FaImage, FaBrick, FaUnicorn
-} from 'react-icons/fa';
-import { SiTrustwallet, SiCoinbase, SiBinance, SiLedger, SiTrezor, SiOkx } from 'react-icons/si';
+import { FaWallet, FaEthereum, FaBitcoin, FaTelegram, FaShieldAlt, FaAtom, FaCalculator, FaRocket, FaCreditCard, FaInfinity, FaImage, FaBrick, FaUnicorn } from 'react-icons/fa';
+import { SiTrustwallet, SiCoinbase, SiBinance, SiOkx } from 'react-icons/si';
 
 export default function WalletModal({ isOpen, onClose, connectWallet, openWalletApp }) {
   const [isConnecting, setIsConnecting] = useState(false);
@@ -18,10 +14,10 @@ export default function WalletModal({ isOpen, onClose, connectWallet, openWallet
     { name: 'Binance Wallet', icon: <SiBinance />, type: 'binance' },
     { name: 'Rabby Wallet', icon: '🐰', type: 'rabby' },
     { name: 'OKX Wallet', icon: <SiOkx />, type: 'okx' },
-    { name: 'Ledger', icon: <SiLedger />, type: 'ledger' },
-    { name: 'Trezor', icon: <SiTrezor />, type: 'trezor' },
+    { name: 'Ledger', icon: '🔐', type: 'ledger' },
+    { name: 'Trezor', icon: '🔑', type: 'trezor' },
     { name: 'TON Wallet', icon: <FaTelegram />, type: 'ton' },
-    { name: 'Phantom', icon: '👻', type: 'phantom' }, // Icon එක වෙනස් කළා
+    { name: 'Phantom', icon: '👻', type: 'phantom' },
     { name: 'Keplr', icon: <FaAtom />, type: 'keplr' },
     { name: 'Math Wallet', icon: <FaCalculator />, type: 'math' },
     { name: 'SafePal', icon: <FaShieldAlt />, type: 'safepal' },
