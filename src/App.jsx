@@ -2,9 +2,11 @@ import { useState, useEffect } from 'react';
 import { BrowserRouter as Router, Routes, Route } from 'react-router-dom';
 import { ethers } from 'ethers';
 import { EthereumProvider } from '@walletconnect/ethereum-provider';
+
 import Navbar from './components/Navbar';
 import Footer from './components/Footer';
 import WalletModal from './components/WalletModal';
+
 import Swap from './pages/Swap';
 import Explore from './pages/Explore';
 import Pools from './pages/Pools';
@@ -23,135 +25,190 @@ export default function App() {
   const [provider, setProvider] = useState(null);
   const [isWalletModalOpen, setIsWalletModalOpen] = useState(false);
 
-  // Mobile එකෙන් ආවොත් autoconnect කරන්න
+  // Mobile App එකෙන් DApp In-App Browser එකට redirection එක ආ පසු auto-connect වීම
   useEffect(() => {
     const urlParams = new URLSearchParams(window.location.search);
     if (urlParams.get('autoconnect') === 'true') {
-      setTimeout(() => connectWallet(), 1500);
+      const timer = setTimeout(() => {
+        connectWallet('injected');
+      }, 1200);
+      return () => clearTimeout(timer);
     }
   }, []);
 
-  // ⭐ WalletModal එකෙන් walletType සහ selectedProvider එවන නිසා ඒවා ගන්නවා
+  // 1. Connect / Disconnect Main Handler
   const connectWallet = async (walletType, selectedProvider) => {
-    // 1. දැනටමත් connect වෙලා නම් -> DISCONNECT
+    // 🔴 1.1 දැනටමත් connect වී ඇත්නම් -> DISCONNECT LOGIC
     if (walletAddress) {
       try {
-        if (provider && provider.provider && typeof provider.provider.disconnect === "function") {
+        if (provider && provider.provider && typeof provider.provider.disconnect === 'function') {
           await provider.provider.disconnect();
         }
-        localStorage.removeItem("walletconnect");
-        localStorage.removeItem("WEB3_CONNECT_CACHED_PROVIDER");
-        localStorage.removeItem("WALLETCONNECT_DEEPLINK_CHOICE");
-        Object.keys(localStorage).forEach(key => {
-          if (key.startsWith('wc@2')) {
+        
+        // Cache & Local Storage Clear කිරීම
+        localStorage.removeItem('walletconnect');
+        localStorage.removeItem('WEB3_CONNECT_CACHED_PROVIDER');
+        localStorage.removeItem('WALLETCONNECT_DEEPLINK_CHOICE');
+        
+        Object.keys(localStorage).forEach((key) => {
+          if (key.startsWith('wc@2') || key.startsWith('walletconnect')) {
             localStorage.removeItem(key);
           }
         });
+        
         sessionStorage.clear();
         setProvider(null);
         setWalletAddress(null);
-        alert("Wallet Disconnected Successfully! Refresh the page to reconnect.");
+        
         window.location.reload(); 
       } catch (error) {
-        console.error("Error during disconnect:", error);
+        console.error('Error during disconnect:', error);
       }
       return;
     }
-    
-    // 2. අලුතින් connect වෙන්න
+
+    // 🟢 1.2 අලුතින් CONNECT වන LOGIC
     try {
-      // WalletModal එකෙන් specific provider එකක් එවලා නම්, ඒක පාවිච්චි කරන්න
-      if (selectedProvider) {
-        const web3Provider = new ethers.providers.Web3Provider(selectedProvider, "any");
+      let activeProvider = selectedProvider;
+
+      // Modal එකෙන් provider එකක් ලබා දී නොමැති නම් default injected provider එක පාවිච්චි කිරීම
+      if (!activeProvider && typeof window !== 'undefined' && window.ethereum) {
+        activeProvider = window.ethereum;
+      }
+
+      if (activeProvider) {
+        // Web3 Provider Creation
+        const web3Provider = new ethers.providers.Web3Provider(activeProvider, 'any');
+        
+        // Account Request
         await web3Provider.send('eth_requestAccounts', []);
         const signer = web3Provider.getSigner();
         const address = await signer.getAddress();
         const network = await web3Provider.getNetwork();
+
+        // Ethereum Mainnet (Chain ID 1) Check (අවශ්‍ය නම් මෙය වෙනස් කළ හැක)
         if (network.chainId !== 1) {
-          alert('Please switch your wallet network to Ethereum Mainnet!');
-          return;
+          try {
+            await activeProvider.request({
+              method: 'wallet_switchEthereumChain',
+              params: [{ chainId: '0x1' }],
+            });
+          } catch (switchError) {
+            console.warn('Network switch required:', switchError);
+          }
         }
+
         setProvider(web3Provider);
         setWalletAddress(address);
-        setIsWalletModalOpen(false); 
-      } 
-      // window.ethereum තියෙනවා නම් (default)
-      else if (window.ethereum) {
-        const web3Provider = new ethers.providers.Web3Provider(window.ethereum, "any");
-        await web3Provider.send('eth_requestAccounts', []);
-        const signer = web3Provider.getSigner();
-        const address = await signer.getAddress();
-        const network = await web3Provider.getNetwork();
-        if (network.chainId !== 1) {
-          alert('Please switch your wallet network to Ethereum Mainnet!');
-          return;
-        }
-        setProvider(web3Provider);
-        setWalletAddress(address);
-        setIsWalletModalOpen(false); 
-      } 
-      // Mobile WalletConnect
-      else {
+        setIsWalletModalOpen(false);
+
+      } else {
+        // Fallback: Web3 Browser / Extension නොමැති විට WalletConnect QR Modal එක පෙන්වීම
         const walletConnectProvider = await EthereumProvider.init({
-          projectId: "0204ba9ef8f8856cd275da139b717e8a",
+          projectId: '0204ba9ef8f8856cd275da139b717e8a',
           chains: [1],
           showQrModal: true,
         });
+
         await walletConnectProvider.connect();
-        const web3Provider = new ethers.providers.Web3Provider(walletConnectProvider, "any");
+        const web3Provider = new ethers.providers.Web3Provider(walletConnectProvider, 'any');
         const signer = web3Provider.getSigner();
         const address = await signer.getAddress();
+
         setProvider(web3Provider);
         setWalletAddress(address);
-        setIsWalletModalOpen(false); 
+        setIsWalletModalOpen(false);
       }
-    } catch (error) { 
-      console.error(error); 
-      if (error.code !== 4001) {
-        alert("Connection failed: " + error.message);
+    } catch (error) {
+      console.error('Connection Failed:', error);
+      if (error.code !== 4001) { // 4001 = User rejected the request
+        alert('Connection failed: ' + (error.message || 'User cancelled'));
       }
     }
   };
 
-  // Mobile එකෙන් App එකට යවන function එක
+  // 2. Mobile Wallet Deep Linking Function (25+ Wallets)
   const openWalletApp = (walletType) => {
-    let currentUrl = window.location.href.split('?')[0];
-    let targetUrl = `${currentUrl}?autoconnect=true`;
-    let cleanUrl = targetUrl.replace(/^https?:\/\//, '');
+    const currentUrl = window.location.href.split('?')[0];
+    const targetUrl = `${currentUrl}?autoconnect=true`;
+    const cleanUrl = targetUrl.replace(/^https?:\/\//, '');
+    const encodedTarget = encodeURIComponent(targetUrl);
+
     let deepLink = '';
 
     switch (walletType) {
-      case 'metamask': deepLink = `https://metamask.app.link/dapp/${cleanUrl}`; break;
-      case 'trust': deepLink = `https://link.trustwallet.com/open_url?coin_id=60&url=${encodeURIComponent(targetUrl)}`; break;
-      case 'coinbase': deepLink = `https://go.cb-w.com/dapp?url=${encodeURIComponent(targetUrl)}`; break;
-      case 'binance': deepLink = `https://app.binance.com/en/deeplink/cryptorouting/dapp?url=${encodeURIComponent(targetUrl)}`; break;
-      case 'rabby': deepLink = `https://rabby.io/dapp/${cleanUrl}`; break;
-      case 'okx': deepLink = `https://www.okx.com/download?deeplink=${encodeURIComponent(targetUrl)}`; break;
-      case 'phantom': deepLink = `https://phantom.app/ul/browse/${cleanUrl}?ref=${encodeURIComponent(targetUrl)}`; break;
-      case 'keplr': deepLink = `https://wallet.keplr.app/#/ethereum/dapp/${cleanUrl}`; break;
-      case 'math': deepLink = `https://mathwallet.org/dapp/${cleanUrl}`; break;
-      case 'safepal': deepLink = `https://www.safepal.com/dapp/${cleanUrl}`; break;
-      case 'tokenpocket': deepLink = `https://www.tokenpocket.pro/dapp/${cleanUrl}`; break;
-      case 'imtoken': deepLink = `https://token.im/dapp/${cleanUrl}`; break;
-      case 'bitkeep': deepLink = `https://bitkeep.com/dapp/${cleanUrl}`; break;
-      case 'coin98': deepLink = `https://coin98.com/dapp/${cleanUrl}`; break;
-      case 'zerion': deepLink = `https://zerion.io/dapp/${cleanUrl}`; break;
-      case 'frontier': deepLink = `https://frontier.xyz/dapp/${cleanUrl}`; break;
-      case 'dcent': deepLink = `https://dcentwallet.com/dapp/${cleanUrl}`; break;
-      case 'xdefi': deepLink = `https://xdefi.io/dapp/${cleanUrl}`; break;
-      case 'taho': deepLink = `https://taho.xyz/dapp/${cleanUrl}`; break;
-      case 'frame': deepLink = `https://frame.sh/dapp/${cleanUrl}`; break;
-      case 'blockwallet': deepLink = `https://blockwallet.io/dapp/${cleanUrl}`; break;
-      case 'infinity': deepLink = `https://infinitywallet.io/dapp/${cleanUrl}`; break;
-      default: deepLink = targetUrl;
+      case 'metamask':
+        deepLink = `https://metamask.app.link/dapp/${cleanUrl}`;
+        break;
+      case 'trust':
+        deepLink = `https://link.trustwallet.com/open_url?coin_id=60&url=${encodedTarget}`;
+        break;
+      case 'coinbase':
+        deepLink = `https://go.cb-w.com/dapp?url=${encodedTarget}`;
+        break;
+      case 'okx':
+        deepLink = `https://www.okx.com/download?deeplink=${encodedTarget}`;
+        break;
+      case 'binance':
+        deepLink = `https://app.binance.com/en/deeplink/cryptorouting/dapp?url=${encodedTarget}`;
+        break;
+      case 'phantom':
+        deepLink = `https://phantom.app/ul/browse/${cleanUrl}?ref=${encodedTarget}`;
+        break;
+      case 'safepal':
+        deepLink = `https://link.safepal.io/open_url?url=${encodedTarget}`;
+        break;
+      case 'tokenpocket':
+        deepLink = `https://m.tokenpocket.pro/rest/dapp/open?url=${encodedTarget}`;
+        break;
+      case 'bitkeep':
+        deepLink = `https://bkcode.vip?action=dapp&url=${encodedTarget}`;
+        break;
+      case 'coin98':
+        deepLink = `https://coin98.com/dapp/${cleanUrl}`;
+        break;
+      case 'imtoken':
+        deepLink = `https://token.im/dapp/${cleanUrl}`;
+        break;
+      case 'math':
+        deepLink = `https://mathwallet.org/dapp/${cleanUrl}`;
+        break;
+      case 'zerion':
+        deepLink = `https://zerion.io/dapp/${cleanUrl}`;
+        break;
+      case '1inch':
+      case 'oneinch':
+        deepLink = `https://1inch.io/dapp/${cleanUrl}`;
+        break;
+      case 'frontier':
+        deepLink = `https://frontier.xyz/dapp/${cleanUrl}`;
+        break;
+      case 'dcent':
+        deepLink = `https://dcentwallet.com/dapp/${cleanUrl}`;
+        break;
+      case 'xdefi':
+        deepLink = `https://xdefi.io/dapp/${cleanUrl}`;
+        break;
+      case 'taho':
+        deepLink = `https://taho.xyz/dapp/${cleanUrl}`;
+        break;
+      case 'blockwallet':
+        deepLink = `https://blockwallet.io/dapp/${cleanUrl}`;
+        break;
+      case 'infinity':
+        deepLink = `https://infinitywallet.io/dapp/${cleanUrl}`;
+        break;
+      default:
+        deepLink = targetUrl;
     }
+
+    // Direct Redirection to App Deep Link
     window.location.href = deepLink;
   };
 
   return (
     <Router>
       <div className="min-h-screen flex flex-col bg-surface">
-        
         <Navbar 
           walletAddress={walletAddress} 
           connectWallet={connectWallet} 
