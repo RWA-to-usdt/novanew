@@ -1,9 +1,4 @@
 import { useState } from 'react';
-import { 
-  FaWallet, FaEthereum, FaBitcoin, FaTelegram, FaShieldAlt, 
-  FaAtom, FaCalculator, FaRocket, FaCreditCard, FaInfinity, 
-  FaImage, FaBrick, FaUnicorn, FaKey, FaLock 
-} from 'react-icons/fa';
 
 export default function WalletModal({ isOpen, onClose, connectWallet, openWalletApp }) {
   const [isConnecting, setIsConnecting] = useState(false);
@@ -12,30 +7,30 @@ export default function WalletModal({ isOpen, onClose, connectWallet, openWallet
 
   const wallets = [
     { name: 'MetaMask', icon: '🦊', type: 'metamask' },
-    { name: 'Trust Wallet', icon: <FaWallet />, type: 'trust' },
-    { name: 'Coinbase Wallet', icon: '🛡️', type: 'coinbase' },
+    { name: 'Trust Wallet', icon: '🛡️', type: 'trust' },
+    { name: 'Coinbase Wallet', icon: '🔵', type: 'coinbase' },
     { name: 'Binance Wallet', icon: '🟡', type: 'binance' },
     { name: 'Rabby Wallet', icon: '🐰', type: 'rabby' },
     { name: 'OKX Wallet', icon: '⭕', type: 'okx' },
-    { name: 'Ledger', icon: <FaLock />, type: 'ledger' },
-    { name: 'Trezor', icon: <FaKey />, type: 'trezor' },
-    { name: 'TON Wallet', icon: <FaTelegram />, type: 'ton' },
+    { name: 'Ledger', icon: '🔐', type: 'ledger' },
+    { name: 'Trezor', icon: '🔑', type: 'trezor' },
+    { name: 'TON Wallet', icon: '💎', type: 'ton' },
     { name: 'Phantom', icon: '👻', type: 'phantom' },
-    { name: 'Keplr', icon: <FaAtom />, type: 'keplr' },
-    { name: 'Math Wallet', icon: <FaCalculator />, type: 'math' },
-    { name: 'SafePal', icon: <FaShieldAlt />, type: 'safepal' },
-    { name: 'TokenPocket', icon: <FaWallet />, type: 'tokenpocket' },
-    { name: 'imToken', icon: <FaEthereum />, type: 'imtoken' },
-    { name: 'BitKeep', icon: <FaBitcoin />, type: 'bitkeep' },
+    { name: 'Keplr', icon: '⚛️', type: 'keplr' },
+    { name: 'Math Wallet', icon: '🧮', type: 'math' },
+    { name: 'SafePal', icon: '🛡️', type: 'safepal' },
+    { name: 'TokenPocket', icon: '👛', type: 'tokenpocket' },
+    { name: 'imToken', icon: '🔷', type: 'imtoken' },
+    { name: 'BitKeep', icon: '🔶', type: 'bitkeep' },
     { name: 'Coin98', icon: '🟩', type: 'coin98' },
-    { name: 'Zerion', icon: <FaUnicorn />, type: 'zerion' },
-    { name: 'Frontier', icon: <FaRocket />, type: 'frontier' },
-    { name: 'D\'CENT', icon: <FaCreditCard />, type: 'dcent' },
-    { name: 'XDEFI', icon: <FaShieldAlt />, type: 'xdefi' },
+    { name: 'Zerion', icon: '🦄', type: 'zerion' },
+    { name: 'Frontier', icon: '🚀', type: 'frontier' },
+    { name: 'D\'CENT', icon: '💳', type: 'dcent' },
+    { name: 'XDEFI', icon: '🛡️', type: 'xdefi' },
     { name: 'Taho', icon: '🦊', type: 'taho' },
-    { name: 'Frame', icon: <FaImage />, type: 'frame' },
-    { name: 'BlockWallet', icon: <FaBrick />, type: 'blockwallet' },
-    { name: 'Infinity Wallet', icon: <FaInfinity />, type: 'infinity' },
+    { name: 'Frame', icon: '🖼️', type: 'frame' },
+    { name: 'BlockWallet', icon: '🧱', type: 'blockwallet' },
+    { name: 'Infinity Wallet', icon: '♾️', type: 'infinity' },
   ];
 
   const handleConnect = async (walletType) => {
