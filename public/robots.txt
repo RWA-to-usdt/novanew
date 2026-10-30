@@ -1,4 +1,4 @@
 User-agent: *
 Allow: /
 
-Sitemap: https://novanew-eight.vercel.app/sitemap.xml
+Sitemap: https://www.novaswap.space/sitemap.xml
