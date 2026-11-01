@@ -1,7 +1,17 @@
 import { FaTwitter, FaGithub, FaDiscord } from 'react-icons/fa';
 import { Link } from 'react-router-dom';
+import { useEffect, useRef } from 'react';
 
 export default function Footer() {
+  const trustpilotRef = useRef(null);
+
+  useEffect(() => {
+    // Trustpilot script එක load වුණාම widget එක render කරන්න
+    if (window.Trustpilot) {
+      window.Trustpilot.loadFromElement(trustpilotRef.current, true);
+    }
+  }, []);
+
   return (
     <footer className="bg-[#0D111C] border-t border-[#293249] mt-20 pt-16 pb-8 px-6">
       <div className="max-w-7xl mx-auto">
@@ -46,23 +56,19 @@ export default function Footer() {
           </div>
         </div>
 
-        {/* Security Audit Section */}
-        <div className="bg-[#131A2A] border border-[#293249] rounded-xl p-4 mb-8 flex flex-col md:flex-row items-center justify-between text-center md:text-left space-y-3 md:space-y-0">
-          <div className="flex items-center space-x-3">
-            <span className="text-2xl">🛡️</span>
-            <div>
-              <p className="text-white font-semibold text-sm">Security First</p>
-              <p className="text-xs text-gray-400">Powered by Uniswap's Universal Router, audited by OpenZeppelin.</p>
-            </div>
-          </div>
-          <a 
-            href="https://www.openzeppelin.com/news/uniswap-universal-router-2-1-and-v4-periphery-audit" 
-            target="_blank" 
-            rel="noopener noreferrer"
-            className="text-xs font-semibold text-brand-500 hover:text-brand-400 bg-brand-500/10 px-4 py-2 rounded-lg border border-brand-500/20 transition"
+        {/* Trustpilot Widget */}
+        <div className="flex justify-center mb-8">
+          <div 
+            ref={trustpilotRef}
+            className="trustpilot-widget" 
+            data-locale="en-US" 
+            data-template-id="56278e9abfbbba0bdcd568bc" 
+            data-businessunit-id="6ae7adee6be2cea2d39ef8cc" 
+            data-style-height="52px" 
+            data-style-width="100%"
           >
-            View Audit Report →
-          </a>
+            <a href="https://www.trustpilot.com/review/novaswap.space" target="_blank" rel="noopener">Trustpilot</a>
+          </div>
         </div>
 
         {/* Bottom Section: Copyright & Socials */}
