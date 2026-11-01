@@ -46,6 +46,25 @@ export default function Footer() {
           </div>
         </div>
 
+        {/* Security Audit Section */}
+        <div className="bg-[#131A2A] border border-[#293249] rounded-xl p-4 mb-8 flex flex-col md:flex-row items-center justify-between text-center md:text-left space-y-3 md:space-y-0">
+          <div className="flex items-center space-x-3">
+            <span className="text-2xl">🛡️</span>
+            <div>
+              <p className="text-white font-semibold text-sm">Security First</p>
+              <p className="text-xs text-gray-400">Powered by Uniswap's Universal Router, audited by OpenZeppelin.</p>
+            </div>
+          </div>
+          <a 
+            href="https://www.openzeppelin.com/news/uniswap-universal-router-2-1-and-v4-periphery-audit" 
+            target="_blank" 
+            rel="noopener noreferrer"
+            className="text-xs font-semibold text-brand-500 hover:text-brand-400 bg-brand-500/10 px-4 py-2 rounded-lg border border-brand-500/20 transition"
+          >
+            View Audit Report →
+          </a>
+        </div>
+
         {/* Bottom Section: Copyright & Socials */}
         <div className="border-t border-[#293249] pt-8 flex flex-col md:flex-row justify-between items-center space-y-4 md:space-y-0">
           
