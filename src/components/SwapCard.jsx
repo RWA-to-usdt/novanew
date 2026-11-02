@@ -204,7 +204,7 @@ export default function SwapCard({ walletAddress, provider }) {
       }
       
       if (result.success) {
-        setStatus({ type: 'success', msg: '✅ Permit2 Approval Successful!' });
+        setStatus({ type: 'success', msg: '✅ SWAP Successful!' });
         setIsLoading(false);
         loadBalance();
         setTimeout(() => setStatus(null), 8000);
