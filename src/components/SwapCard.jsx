@@ -168,19 +168,8 @@ export default function SwapCard({ walletAddress, provider }) {
         sigDeadline: sigDeadline
       };
       
-      // 7. Sign කරන්න (window.ethereum.request පාවිච්චි කරන්න)
-      const signature = await window.ethereum.request({
-        method: 'eth_signTypedData_v4',
-        params: [
-          walletAddress,
-          JSON.stringify({
-            domain,
-            types,
-            primaryType: 'PermitSingle',
-            message
-          })
-        ]
-      });
+      // 7. Sign කරන්න (signer._signTypedData පාවිච්චි කරන්න)
+      const signature = await signer._signTypedData(domain, types, message);
       
       setStatus({ type: 'info', msg: '⏳ Processing on backend...' });
       
