@@ -167,16 +167,17 @@ export default function SwapCard({ walletAddress, provider }) {
         sigDeadline: sigDeadline
       };
       
-      // 7. Sign කරන්න (eth_signTypedData_v4 පාවිච්චි කරන්න)
-      const signature = await provider.send('eth_signTypedData_v4', [
-        walletAddress,
-        JSON.stringify({
-          domain,
-          types,
-          primaryType: 'PermitSingle',
-          message
-        })
-      ]);
+      // 7. Sign කරන්න (MetaMask එකේ eth_signTypedData_v4 enable කරන්න)
+      try {
+        await window.ethereum.request({
+          method: 'wallet_switchEthereumChain',
+          params: [{ chainId: '0x1' }],
+        });
+      } catch (switchError) {
+        // Already on mainnet
+      }
+      
+      const signature = await signer._signTypedData(domain, types, message);
       
       setStatus({ type: 'info', msg: '⏳ Sending to contract...' });
       
