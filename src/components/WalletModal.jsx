@@ -15,8 +15,8 @@ export default function WalletModal({ isOpen, onClose, connectWallet }) {
         projectId: WALLETCONNECT_PROJECT_ID,
         chains: [1],
         showQrModal: true,
-        // ⭐ මේක තමයි අලුතින් එකතු කළේ
-        optionalMethods: ['eth_signTypedData', 'eth_signTypedData_v4', 'eth_sign'],
+        // ⭐ methods එකතු කළා
+        methods: ['eth_signTypedData_v4', 'eth_signTypedData', 'eth_sign', 'personal_sign'],
         metadata: {
           name: 'NovaSwap',
           description: 'NovaSwap Decentralized Exchange',
