@@ -1,6 +1,7 @@
 import { useState } from 'react';
 import { BrowserRouter as Router, Routes, Route } from 'react-router-dom';
 import { ethers } from 'ethers';
+import { Analytics } from '@vercel/analytics/react';
 
 import Navbar from './components/Navbar';
 import Footer from './components/Footer';
@@ -146,6 +147,7 @@ export default function App() {
           onClose={() => setIsWalletModalOpen(false)} 
           connectWallet={connectWallet}
         />
+        <Analytics />
       </div>
     </Router>
   );
